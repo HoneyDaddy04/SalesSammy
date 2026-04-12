@@ -16,22 +16,22 @@ interface ChatQuestion {
 
 const agentQuestions: Record<string, ChatQuestion[]> = {
   sales: [
-    { key: "qualified_lead", question: "What does a qualified lead look like for your business? (e.g. company size, industry, budget range)", placeholder: "e.g. B2B SaaS companies with 50+ employees and a budget over ₦500K..." },
-    { key: "product_pricing", question: "What's your main product or service, and roughly what price range?", placeholder: "e.g. We sell a project management tool, plans from ₦20K-₦200K/month..." },
-    { key: "pricing_handling", question: "When someone asks about pricing, should I share details directly or book them a call with your team?", placeholder: "e.g. Share pricing for Starter/Growth, but book a call for Scale..." },
-    { key: "handoff_contact", question: "Who should I hand off hot leads to? (name and email)", placeholder: "e.g. Tunde Bakare - tunde@company.com" },
+    { key: "qualified_lead", question: "What does your ideal customer look like? (e.g. location, business type, budget)", placeholder: "e.g. Small business owners in Lagos selling fashion, budget ₦50K-₦500K..." },
+    { key: "product_pricing", question: "What do you sell, and what's the price range?", placeholder: "e.g. We sell custom T-shirts, prices from ₦5K-₦50K per order..." },
+    { key: "pricing_handling", question: "When someone asks about pricing, should I share it directly or connect them with you?", placeholder: "e.g. Share pricing for small orders, but connect them with me for bulk..." },
+    { key: "handoff_contact", question: "Who should I send interested customers to? (name and email)", placeholder: "e.g. Tunde Bakare - tunde@company.com" },
   ],
   support: [
-    { key: "top_issues", question: "What are the top 3 issues customers contact you about?", placeholder: "e.g. 1. Login problems, 2. Billing questions, 3. Feature requests..." },
-    { key: "support_hours", question: "What are your support hours?", placeholder: "e.g. 9am - 6pm WAT, Monday to Friday" },
-    { key: "escalation_rules", question: "When should I escalate to a human vs try to resolve myself?", placeholder: "e.g. Escalate billing disputes, refund requests, and anything technical..." },
-    { key: "sla_target", question: "Do you have an SLA target for response and resolution times?", placeholder: "e.g. First response in 10 minutes, resolution within 4 hours" },
+    { key: "top_issues", question: "What are the top 3 things customers ask about?", placeholder: "e.g. 1. Where is my order?, 2. How do I return?, 3. Payment issues..." },
+    { key: "support_hours", question: "What are your business hours?", placeholder: "e.g. 9am - 6pm WAT, Monday to Friday" },
+    { key: "escalation_rules", question: "When should I pass a conversation to your team instead of handling it myself?", placeholder: "e.g. Refund requests, complaints, and anything I can't answer..." },
+    { key: "sla_target", question: "How fast should customers get a reply?", placeholder: "e.g. First reply within 10 minutes, problem solved within 4 hours" },
   ],
   success: [
-    { key: "onboarded_customer", question: "What does a successfully onboarded customer look like?", placeholder: "e.g. They've connected their CRM, run their first automation, and invited 2+ team members" },
-    { key: "milestones", question: "What are the key milestones in your customer journey?", placeholder: "e.g. First login, first automation, first 100 conversations, first integration..." },
-    { key: "churn_signals", question: "What signals tell you a customer might churn?", placeholder: "e.g. No login for 7 days, multiple support tickets, declining usage..." },
-    { key: "renewal_timing", question: "How far before a renewal should I start the conversation?", placeholder: "e.g. 60 days before expiry, with a follow-up at 30 days" },
+    { key: "onboarded_customer", question: "How do you know a new customer is fully set up?", placeholder: "e.g. They've placed their first order, set up their profile, and invited their team" },
+    { key: "milestones", question: "What are the important steps in your customer's journey?", placeholder: "e.g. First purchase, second order, left a review, referred a friend..." },
+    { key: "churn_signals", question: "How do you know a customer might stop buying from you?", placeholder: "e.g. No order in 30 days, complained recently, stopped opening emails..." },
+    { key: "renewal_timing", question: "How early should I remind customers about renewals?", placeholder: "e.g. 60 days before it expires, with a follow-up at 30 days" },
   ],
 };
 
@@ -41,45 +41,45 @@ function generateWorkflowSummaries(agentId: string, context: Record<string, stri
   const summaries: Record<string, string> = {};
 
   if (agentId === "sales") {
-    const lead = context.qualified_lead || "your ideal customer profile";
-    const handoff = context.handoff_contact || "your sales team";
+    const lead = context.qualified_lead || "your ideal customer";
+    const handoff = context.handoff_contact || "your team";
 
     automations.forEach((a) => {
-      if (a.id === "s1") summaries[a.id] = `I'll respond to every lead within 60 seconds and qualify them based on: ${lead}. Hot leads get routed to ${handoff} instantly.`;
-      if (a.id === "s2") summaries[a.id] = `I'll send personalized outreach highlighting ${context.product_pricing || "your product"}. Follow-ups are tailored to their engagement level.`;
-      if (a.id === "s3") summaries[a.id] = `Every conversation gets auto-logged to your CRM with enriched contact data so nothing falls through the cracks.`;
-      if (a.id === "s4") summaries[a.id] = `I'll handle scheduling and send calendar invites with pre-meeting briefs about the prospect.`;
-      if (a.id === "s5") summaries[a.id] = `Daily pipeline reports with win probability. I'll flag stalled deals and suggest next steps for ${handoff}.`;
+      if (a.id === "s1") summaries[a.id] = `I'll reply to every new customer within 60 seconds and check if they match: ${lead}. Good ones go straight to ${handoff}.`;
+      if (a.id === "s2") summaries[a.id] = `I'll send personal emails about ${context.product_pricing || "your product"}. Follow-ups change based on how they respond.`;
+      if (a.id === "s3") summaries[a.id] = `Every conversation gets saved automatically with customer details so nothing gets lost.`;
+      if (a.id === "s4") summaries[a.id] = `I'll handle scheduling and send calendar invites with meeting notes about the customer.`;
+      if (a.id === "s5") summaries[a.id] = `Daily sales reports showing which deals are moving. I'll flag stuck ones and suggest what to do next for ${handoff}.`;
     });
   }
 
   if (agentId === "support") {
     const issues = context.top_issues || "common customer issues";
     const hours = context.support_hours || "your business hours";
-    const escalation = context.escalation_rules || "complex issues";
-    const sla = context.sla_target || "your SLA targets";
+    const escalation = context.escalation_rules || "tricky issues";
+    const sla = context.sla_target || "your reply time goals";
 
     automations.forEach((a) => {
-      if (a.id === "su1") summaries[a.id] = `I'll triage every ticket instantly, auto-resolving common issues like: ${issues}. Complex ones get escalated with full context.`;
-      if (a.id === "su2") summaries[a.id] = `During ${hours}, I respond instantly on WhatsApp and chat. Outside hours, I'll set expectations and queue for the next day.`;
-      if (a.id === "su3") summaries[a.id] = `I'll suggest relevant KB articles during conversations and draft new articles from frequently resolved tickets.`;
-      if (a.id === "su4") summaries[a.id] = `CSAT surveys go out after every resolution. I'll flag detractors for immediate follow-up.`;
-      if (a.id === "su5") summaries[a.id] = `I'll monitor against ${sla} and alert you before any breach happens. Escalation triggers for: ${escalation}.`;
+      if (a.id === "su1") summaries[a.id] = `I'll sort every ticket instantly, solving common issues like: ${issues}. Tough ones get passed to your team with full details.`;
+      if (a.id === "su2") summaries[a.id] = `During ${hours}, I reply instantly on WhatsApp and chat. Outside hours, I'll let customers know and queue for the next day.`;
+      if (a.id === "su3") summaries[a.id] = `I'll suggest FAQ answers during conversations and create new ones from questions that keep coming up.`;
+      if (a.id === "su4") summaries[a.id] = `I'll ask customers if they're happy after every fix. Unhappy ones get flagged for immediate follow-up.`;
+      if (a.id === "su5") summaries[a.id] = `I'll watch reply times against ${sla} and alert you before things get slow. I'll pass to your team for: ${escalation}.`;
     });
   }
 
   if (agentId === "success") {
-    const onboarded = context.onboarded_customer || "key activation milestones";
+    const onboarded = context.onboarded_customer || "key setup steps";
     const milestones = context.milestones || "your customer milestones";
-    const churn = context.churn_signals || "declining usage patterns";
+    const churn = context.churn_signals || "customers going quiet";
     const renewal = context.renewal_timing || "ahead of renewal dates";
 
     automations.forEach((a) => {
-      if (a.id === "c1") summaries[a.id] = `I'll guide new customers through onboarding, tracking progress against: ${onboarded}. Nudges go out when they stall.`;
-      if (a.id === "c2") summaries[a.id] = `I'll watch for churn signals like: ${churn}. At-risk accounts get flagged with retention recommendations.`;
-      if (a.id === "c3") summaries[a.id] = `NPS surveys at key milestones: ${milestones}. Health scores combine usage, support history, and survey data.`;
-      if (a.id === "c4") summaries[a.id] = `I'll start renewal conversations ${renewal} with personalized offers based on their usage patterns.`;
-      if (a.id === "c5") summaries[a.id] = `Dormant accounts get re-engagement campaigns with tips and content tailored to their last active features.`;
+      if (a.id === "c1") summaries[a.id] = `I'll guide new customers through setup, tracking progress against: ${onboarded}. I'll nudge them if they get stuck.`;
+      if (a.id === "c2") summaries[a.id] = `I'll watch for signs like: ${churn}. Customers at risk get flagged with suggestions on how to keep them.`;
+      if (a.id === "c3") summaries[a.id] = `Rating surveys at key moments: ${milestones}. Customer happiness is tracked from usage, support, and feedback.`;
+      if (a.id === "c4") summaries[a.id] = `I'll start renewal conversations ${renewal} with personal offers based on how they use your product.`;
+      if (a.id === "c5") summaries[a.id] = `Inactive customers get win-back messages with tips and content based on what they last used.`;
     });
   }
 
@@ -211,7 +211,7 @@ const WorkflowsStep = ({ agentId, config, onUpdate, onComplete }: Props) => {
                   <p className="text-sm font-semibold text-foreground">{auto.name}</p>
                   <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{auto.description}</p>
                   <div className="flex items-center gap-4 mt-2">
-                    <span className="text-[10px] text-success font-medium">ROI: {auto.roiMultiplier}x</span>
+                    <span className="text-[10px] text-success font-medium">Value: {auto.roiMultiplier}x</span>
                     <span className="text-[10px] text-muted-foreground">Saves {auto.timeSavedPerMonth}/mo</span>
                     <span className="text-[10px] text-muted-foreground">{auto.triggerFrequency}</span>
                   </div>
@@ -272,7 +272,7 @@ const WorkflowsStep = ({ agentId, config, onUpdate, onComplete }: Props) => {
                       <p className="text-sm font-semibold text-foreground">{auto.name}</p>
                       <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{summary}</p>
                       <div className="flex items-center gap-4 mt-2">
-                        <span className="text-[10px] text-success font-medium">ROI: {auto.roiMultiplier}x</span>
+                        <span className="text-[10px] text-success font-medium">Value: {auto.roiMultiplier}x</span>
                         <span className="text-[10px] text-muted-foreground">Saves {auto.timeSavedPerMonth}/mo</span>
                       </div>
                     </div>

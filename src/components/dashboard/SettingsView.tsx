@@ -336,15 +336,15 @@ const NotificationSettings = () => (
       <SettingRow label="Weekly performance report" desc="Weekly metrics across all teammates"><Toggle settingKey="notif_weekly" enabled /></SettingRow>
       <SettingRow label="Agent errors & failures" desc="Immediate alert when an automation fails"><Toggle settingKey="notif_errors" enabled /></SettingRow>
       <SettingRow label="New conversation alerts" desc="Notify on first conversation from new leads"><Toggle settingKey="notif_new_convo" /></SettingRow>
-      <SettingRow label="SLA breach warnings" desc="Alert when support tickets approach SLA limits"><Toggle settingKey="notif_sla" enabled /></SettingRow>
+      <SettingRow label="Slow reply warnings" desc="Alert when support tickets are taking too long"><Toggle settingKey="notif_sla" enabled /></SettingRow>
     </div>
 
     <div className="rounded-xl border border-border bg-card p-5 shadow-sm mb-4">
       <h3 className="text-sm font-semibold text-foreground mb-2">Slack Notifications</h3>
       <SettingRow label="Connected workspace" desc="vaigence-team.slack.com"><Badge text="Connected" variant="success" /></SettingRow>
       <SettingRow label="Sales alerts channel" desc="#sales-alerts"><Toggle settingKey="slack_sales" enabled /></SettingRow>
-      <SettingRow label="Support escalations" desc="#support-escalations"><Toggle settingKey="slack_support" enabled /></SettingRow>
-      <SettingRow label="Churn risk alerts" desc="#success-alerts"><Toggle settingKey="slack_churn" enabled /></SettingRow>
+      <SettingRow label="Tough support issues" desc="#support-escalations"><Toggle settingKey="slack_support" enabled /></SettingRow>
+      <SettingRow label="Customers at risk of leaving" desc="#success-alerts"><Toggle settingKey="slack_churn" enabled /></SettingRow>
     </div>
 
     <div className="rounded-xl border border-border bg-card p-5 shadow-sm">

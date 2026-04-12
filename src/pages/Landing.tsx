@@ -185,7 +185,7 @@ const Landing = () => {
             {[
               { value: "< 60s", label: "Response time" },
               { value: "24/7", label: "Always on" },
-              { value: "96%", label: "Qualification rate" },
+              { value: "96%", label: "Accuracy" },
               { value: "3x", label: "Revenue impact" },
             ].map((stat) => (
               <div key={stat.label}>
@@ -213,9 +213,9 @@ const Landing = () => {
           {/* Three pillars */}
           <div className="grid md:grid-cols-3 gap-6 mb-20">
             {[
-              { num: "01", title: "Captures every lead", desc: "The moment a lead lands, your AI teammate replies, qualifies them, and books the meeting - so you're always the first responder.", icon: Target },
-              { num: "02", title: "Relentless follow-up", desc: "No lead goes cold, no thread gets forgotten. It nudges, re-engages, and keeps every conversation moving.", icon: MessageSquare },
-              { num: "03", title: "Handles support 24/7", desc: "Responds instantly, resolves what it can, escalates what it can't, and follows up - turning support into retention.", icon: Headphones },
+              { num: "01", title: "Catches every customer", desc: "The moment someone messages you, your AI teammate replies, checks if they're a good fit, and books a meeting — so you never miss a sale.", icon: Target },
+              { num: "02", title: "Never forgets to follow up", desc: "No customer goes ignored, no conversation gets forgotten. It follows up, re-engages, and keeps things moving.", icon: MessageSquare },
+              { num: "03", title: "Handles support 24/7", desc: "Replies instantly, solves what it can, passes what it can't to your team, and follows up — so customers stay happy.", icon: Headphones },
             ].map((item, i) => (
               <motion.div
                 key={item.num}
@@ -242,35 +242,35 @@ const Landing = () => {
               {
                 name: "Kofi",
                 role: "Sales",
-                title: "Senior SDR",
+                title: "Sales Teammate",
                 avatar: salesAvatar,
                 color: "border-agent-sales",
                 icon: TrendingUp,
-                stats: [{ v: "2×", l: "Pipeline" }, { v: "+35%", l: "Close rate" }],
-                desc: "Captures every inbound lead within seconds, qualifies prospects, and books meetings before competitors respond.",
-                tasks: ["Lead qualification", "Email outreach", "Meeting booking", "CRM logging", "Pipeline reporting"],
+                stats: [{ v: "2×", l: "More sales" }, { v: "+35%", l: "Close rate" }],
+                desc: "Replies to every customer message within seconds, checks if they're a good fit, and books meetings for your team.",
+                tasks: ["Checking leads", "Sending emails", "Booking meetings", "Saving records", "Sales reports"],
               },
               {
                 name: "Amara",
                 role: "Support",
-                title: "Support Specialist",
+                title: "Support Teammate",
                 avatar: supportAvatar,
                 color: "border-agent-support",
                 icon: Headphones,
-                stats: [{ v: "94%", l: "CSAT" }, { v: "0.8s", l: "Response" }],
-                desc: "Resolves tickets instantly, escalates what she can't fix, and ensures no customer waits more than 10 minutes.",
-                tasks: ["Ticket triage", "WhatsApp replies", "KB suggestions", "SLA monitoring", "CSAT surveys"],
+                stats: [{ v: "94%", l: "Happy customers" }, { v: "0.8s", l: "Response" }],
+                desc: "Answers customer questions instantly, solves what she can, and passes tough issues to your team. No one waits more than 10 minutes.",
+                tasks: ["Sorting tickets", "WhatsApp replies", "FAQ answers", "Reply time alerts", "Customer ratings"],
               },
               {
                 name: "Zuri",
                 role: "Success",
-                title: "Success Manager",
+                title: "Success Teammate",
                 avatar: successAvatar,
                 color: "border-agent-success",
                 icon: Heart,
-                stats: [{ v: "97%", l: "Retention" }, { v: "3.2×", l: "Expansion" }],
-                desc: "Monitors onboarding, tracks adoption, detects churn signals early, and proactively re-engages accounts.",
-                tasks: ["Onboarding sequences", "Churn prediction", "NPS tracking", "Renewal alerts", "Upsell signals"],
+                stats: [{ v: "97%", l: "Customers kept" }, { v: "3.2×", l: "More revenue" }],
+                desc: "Guides new customers through setup, watches for signs they might leave, and brings back inactive ones.",
+                tasks: ["Welcoming customers", "Spotting who might leave", "Customer ratings", "Renewal reminders", "Upgrade offers"],
               },
             ].map((agent, i) => (
               <motion.div

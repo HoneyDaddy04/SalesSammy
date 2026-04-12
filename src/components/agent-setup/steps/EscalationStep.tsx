@@ -50,9 +50,9 @@ const EscalationStep = ({ agentId, config, onUpdate, onComplete }: Props) => {
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="font-display text-lg font-bold text-foreground mb-1">Escalation Rules</h3>
+        <h3 className="font-display text-lg font-bold text-foreground mb-1">When to Pass to Your Team</h3>
         <p className="text-sm text-muted-foreground">
-          Define when your AI teammate should hand off to a human.
+          Tell your AI teammate when to get a human involved.
         </p>
       </div>
 
@@ -66,8 +66,8 @@ const EscalationStep = ({ agentId, config, onUpdate, onComplete }: Props) => {
           )}
         >
           <div>
-            <p className="text-sm font-medium text-foreground">Escalate on negative sentiment</p>
-            <p className="text-xs text-muted-foreground">Auto-detect frustrated or angry messages and hand off</p>
+            <p className="text-sm font-medium text-foreground">Pass angry or frustrated messages to a human</p>
+            <p className="text-xs text-muted-foreground">Automatically detect when a customer is upset and get your team involved</p>
           </div>
           <div className={cn(
             "w-10 h-6 rounded-full transition-colors flex items-center px-0.5",
@@ -83,8 +83,8 @@ const EscalationStep = ({ agentId, config, onUpdate, onComplete }: Props) => {
 
       {/* Keywords */}
       <div>
-        <Label className="mb-2 block">Escalation Keywords</Label>
-        <p className="text-xs text-muted-foreground mb-3">When a customer mentions these words, escalate to a human.</p>
+        <Label className="mb-2 block">Trigger Words</Label>
+        <p className="text-xs text-muted-foreground mb-3">When a customer uses these words, pass the conversation to your team.</p>
         <div className="flex flex-wrap gap-1.5 mb-3">
           {esc.keywords.map((kw) => (
             <span key={kw} className="flex items-center gap-1 text-xs bg-secondary px-2.5 py-1 rounded-md text-secondary-foreground">
@@ -111,9 +111,9 @@ const EscalationStep = ({ agentId, config, onUpdate, onComplete }: Props) => {
 
       {/* Max auto-replies */}
       <div>
-        <Label className="mb-2 block">Max auto-replies before escalation</Label>
+        <Label className="mb-2 block">Max replies before passing to a human</Label>
         <p className="text-xs text-muted-foreground mb-3">
-          After this many replies without resolution, hand off to a human.
+          If the issue isn't solved after this many replies, your team takes over.
         </p>
         <div className="flex items-center gap-4">
           <input
@@ -130,14 +130,14 @@ const EscalationStep = ({ agentId, config, onUpdate, onComplete }: Props) => {
 
       {/* Handoff email */}
       <div>
-        <Label>Human handoff email</Label>
+        <Label>Team member email</Label>
         <Input
           placeholder="team@company.com"
           value={esc.handoffEmail}
           onChange={(e) => onUpdate({ escalation: { ...esc, handoffEmail: e.target.value } })}
           className="mt-1.5"
         />
-        <p className="text-xs text-muted-foreground mt-1">This person will be notified when an escalation happens.</p>
+        <p className="text-xs text-muted-foreground mt-1">This person gets notified when a conversation is passed to your team.</p>
       </div>
 
       <Button onClick={onComplete} className="w-full gap-2">
