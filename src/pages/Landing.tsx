@@ -159,9 +159,9 @@ const Landing = () => {
               },
               {
                 icon: DollarSign, title: "Hiring someone to do it is expensive and unreliable",
-                stat: "$135K", statLabel: "average cost of a sales hire per year",
-                desc: "You hire someone. They take 3 months to learn your business. Work for about a year. Then leave. 34% turnover rate. You start over. Meanwhile, customers keep slipping through the cracks.",
-                sources: "SalesHive, Bandalier",
+                stat: "₦3.5M+", statLabel: "average cost of a sales hire per year",
+                desc: "You hire someone. They take 3 months to learn your business. Work for about a year. Then leave. 30%+ turnover rate. You start over. Meanwhile, customers keep slipping through the cracks.",
+                sources: "Jobberman, PayScale Nigeria",
               },
             ].map((item, i) => (
               <motion.div key={item.title} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={i + 1}
@@ -328,23 +328,23 @@ const Landing = () => {
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={0} className="text-center mb-12">
             <p className="text-xs uppercase tracking-[0.2em] text-primary font-medium mb-4">Pricing</p>
             <h2 className="font-display text-4xl md:text-5xl font-bold mb-4">Costs less than a coffee a day</h2>
-            <p className="text-lg text-muted-foreground max-w-xl mx-auto">Hiring someone to follow up costs $135K/year. Sammy does it better, for a fraction of the price, and never takes a day off.</p>
+            <p className="text-lg text-muted-foreground max-w-xl mx-auto">Hiring a sales rep costs ₦3.5M–7M/year. Sammy does it better, for a fraction of the price, and never takes a day off.</p>
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
             {[
               {
-                name: "Starter", price: "$49", period: "/mo", desc: "For solo founders and small teams", touches: "500 touches/mo", extra: "$0.50 per extra",
+                name: "Starter", price: "₦49,999", period: "/mo", desc: "For solo founders and small teams", touches: "500 touches/mo", extra: "₦500 per extra",
                 features: ["Sales Sammy (always on)", "Email + WhatsApp channels", "5 lead source connections", "Basic analytics", "Email support"],
                 popular: false,
               },
               {
-                name: "Growth", price: "$149", period: "/mo", desc: "For growing sales teams", touches: "2,000 touches/mo", extra: "$0.40 per extra",
+                name: "Growth", price: "₦149,999", period: "/mo", desc: "For growing sales teams", touches: "2,000 touches/mo", extra: "₦400 per extra",
                 features: ["Everything in Starter", "All deployment channels", "15 lead source connections", "Advanced analytics + reports", "Priority support + Slack", "Custom brand voice tuning"],
                 popular: true,
               },
               {
-                name: "Scale", price: "$499", period: "/mo", desc: "For high-volume outbound", touches: "10,000 touches/mo", extra: "$0.30 per extra",
+                name: "Scale", price: "₦299,999", period: "/mo", desc: "For high-volume outbound", touches: "10,000 touches/mo", extra: "₦300 per extra",
                 features: ["Everything in Growth", "Unlimited lead sources", "Full analytics + API access", "Dedicated account manager", "Custom workflows", "SLA guarantees"],
                 popular: false,
               },
@@ -358,7 +358,7 @@ const Landing = () => {
                   <h3 className="font-display text-lg font-bold">{plan.name}</h3>
                   <p className="text-xs text-muted-foreground">{plan.desc}</p>
                   <div className="mt-4">
-                    <span className="font-display text-4xl font-bold">{plan.price}</span>
+                    <span className="font-display text-3xl font-bold">{plan.price}</span>
                     <span className="text-muted-foreground">{plan.period}</span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">{plan.touches}</p>
@@ -385,15 +385,15 @@ const Landing = () => {
             <h4 className="font-display font-semibold text-foreground mb-4 text-center">The math is simple</h4>
             <div className="grid grid-cols-2 gap-6">
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Hiring someone</p>
-                <p className="text-sm text-muted-foreground">$98K-$173K/year</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Hiring a sales rep</p>
+                <p className="text-sm text-muted-foreground">₦3.5M–7M/year (salary + benefits + tools)</p>
                 <p className="text-sm text-muted-foreground">3 months before they're useful</p>
                 <p className="text-sm text-muted-foreground">Works 8 hours, takes breaks</p>
-                <p className="text-sm text-muted-foreground">Might leave after a year</p>
+                <p className="text-sm text-muted-foreground">30%+ leave within a year</p>
               </div>
               <div>
                 <p className="text-xs text-primary uppercase tracking-wider mb-2">Sales Sammy</p>
-                <p className="text-sm text-foreground font-medium">From $49/month</p>
+                <p className="text-sm text-foreground font-medium">From ₦49,999/month</p>
                 <p className="text-sm text-foreground font-medium">Ready in 15 minutes</p>
                 <p className="text-sm text-foreground font-medium">Works 24/7, never stops</p>
                 <p className="text-sm text-foreground font-medium">Never forgets a customer</p>

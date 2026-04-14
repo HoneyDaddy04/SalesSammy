@@ -36,9 +36,9 @@ const SettingsView = () => {
   );
 
   const planDetails: Record<string, { name: string; price: string; touches: string }> = {
-    starter: { name: "Starter", price: "$49/mo", touches: "500 touches/mo" },
-    growth: { name: "Growth", price: "$149/mo", touches: "2,000 touches/mo" },
-    scale: { name: "Scale", price: "$499/mo", touches: "10,000 touches/mo" },
+    starter: { name: "Starter", price: "₦49,999/mo", touches: "500 touches/mo" },
+    growth: { name: "Growth", price: "₦149,999/mo", touches: "2,000 touches/mo" },
+    scale: { name: "Scale", price: "₦299,999/mo", touches: "10,000 touches/mo" },
   };
 
   const currentPlan = planDetails[billing?.plan || "starter"];
