@@ -3,10 +3,9 @@ import { queryAll } from "../db/database.js";
 
 const router = Router();
 
-/** GET /api/activity?org_id=xxx&agent_id=yyy&limit=50 */
+/** GET /api/activity?org_id=xxx&limit=50 */
 router.get("/", (req, res) => {
   const orgId = req.query.org_id as string;
-  const agentId = req.query.agent_id as string;
   const limit = parseInt((req.query.limit as string) || "50", 10);
 
   if (!orgId) { res.status(400).json({ error: "org_id required" }); return; }
@@ -14,9 +13,10 @@ router.get("/", (req, res) => {
   let sql = `SELECT * FROM activity_log WHERE org_id = ?`;
   const params: unknown[] = [orgId];
 
-  if (agentId) {
-    sql += ` AND agent_id = ?`;
-    params.push(agentId);
+  const contactName = req.query.contact_name as string;
+  if (contactName) {
+    sql += ` AND contact_name = ?`;
+    params.push(contactName);
   }
 
   sql += ` ORDER BY created_at DESC LIMIT ?`;

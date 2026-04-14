@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { ORG_KEY, API_BASE } from "@/lib/constants";
 import { startOnboarding, answerOnboarding, sendOnboardingFeedback } from "@/services/api";
 import logo from "@/assets/logo.png";
 
@@ -89,7 +90,7 @@ const Onboarding = () => {
         lastRes = await answerOnboarding(sid, answer || "Not specified");
       }
 
-      localStorage.setItem("vaigence_org_id", oid);
+      localStorage.setItem(ORG_KEY, oid);
       setOrgId(oid);
       setSampleMessage(lastRes?.sample_message || "");
       setStep(9);
@@ -142,7 +143,7 @@ const Onboarding = () => {
 
                 {step === 0 && (
                   <div className="space-y-6">
-                    <div><h2 className="font-display text-2xl font-bold text-foreground">Hire your AI teammate</h2><p className="text-sm text-muted-foreground mt-2">Quick setup — about 10 minutes. Your follow-up specialist will be ready to work.</p></div>
+                    <div><h2 className="font-display text-2xl font-bold text-foreground">Meet Sammy, your sales agent</h2><p className="text-sm text-muted-foreground mt-2">Quick setup, about 10 minutes. Your follow-up specialist will be ready to work.</p></div>
                     <div className="space-y-3">
                       <div><Label className="text-xs">Your name</Label><Input value={name} onChange={e => setName(e.target.value)} placeholder="Alex Johnson" /></div>
                       <div><Label className="text-xs">Email</Label><Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="alex@company.com" /></div>
@@ -162,7 +163,7 @@ const Onboarding = () => {
 
                 {step === 2 && (
                   <div className="space-y-6">
-                    <div><h2 className="font-display text-2xl font-bold text-foreground">Who are you trying to reach?</h2><p className="text-sm text-muted-foreground mt-2">Role, industry, company size — whatever matters.</p></div>
+                    <div><h2 className="font-display text-2xl font-bold text-foreground">Who are you trying to reach?</h2><p className="text-sm text-muted-foreground mt-2">Role, industry, company size.whatever matters.</p></div>
                     <textarea value={answers.target_audience} onChange={e => updateAnswer("target_audience", e.target.value)}
                       placeholder="Founders and ops leads at companies with 5-30 people. Usually overwhelmed, juggling too many tools."
                       rows={4} className="w-full bg-secondary rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary/20 resize-none" />
@@ -171,7 +172,7 @@ const Onboarding = () => {
 
                 {step === 3 && (
                   <div className="space-y-6">
-                    <div><h2 className="font-display text-2xl font-bold text-foreground">Triggers & Goals</h2><p className="text-sm text-muted-foreground mt-2">The most important step — what signals say someone needs you now?</p></div>
+                    <div><h2 className="font-display text-2xl font-bold text-foreground">Triggers & Goals</h2><p className="text-sm text-muted-foreground mt-2">The most important step.what signals say someone needs you now?</p></div>
                     <div className="space-y-4">
                       <div><Label className="text-xs font-medium">What's a sign they need you right now?</Label>
                         <textarea value={answers.lead_trigger_signals} onChange={e => updateAnswer("lead_trigger_signals", e.target.value)}
@@ -185,7 +186,7 @@ const Onboarding = () => {
 
                 {step === 4 && (
                   <div className="space-y-6">
-                    <div><h2 className="font-display text-2xl font-bold text-foreground">Where do your leads live?</h2><p className="text-sm text-muted-foreground mt-2">Select where your teammate should pull contacts from.</p></div>
+                    <div><h2 className="font-display text-2xl font-bold text-foreground">Where do your leads live?</h2><p className="text-sm text-muted-foreground mt-2">Select where Sammy should pull contacts from.</p></div>
                     <div className="grid grid-cols-2 gap-3">
                       {sourceOptions.map(src => (
                         <button key={src.id} onClick={() => setSelectedSources(prev => prev.includes(src.id) ? prev.filter(s => s !== src.id) : [...prev, src.id])}
@@ -198,7 +199,7 @@ const Onboarding = () => {
 
                 {step === 5 && (
                   <div className="space-y-6">
-                    <div><h2 className="font-display text-2xl font-bold text-foreground">Where do you message them?</h2><p className="text-sm text-muted-foreground mt-2">Your teammate will follow up across these channels.</p></div>
+                    <div><h2 className="font-display text-2xl font-bold text-foreground">Where do you message them?</h2><p className="text-sm text-muted-foreground mt-2">Sammy will follow up across these channels.</p></div>
                     <div className="grid grid-cols-2 gap-3">
                       {channelOptions.map(ch => (
                         <button key={ch.id} onClick={() => setSelectedChannels(prev => prev.includes(ch.id) ? prev.filter(c => c !== ch.id) : [...prev, ch.id])}
@@ -211,16 +212,16 @@ const Onboarding = () => {
 
                 {step === 6 && (
                   <div className="space-y-6">
-                    <div><h2 className="font-display text-2xl font-bold text-foreground">Your voice</h2><p className="text-sm text-muted-foreground mt-2">Paste 2-3 messages you've sent that got good responses. This is how your teammate learns to sound like you.</p></div>
+                    <div><h2 className="font-display text-2xl font-bold text-foreground">Your voice</h2><p className="text-sm text-muted-foreground mt-2">Paste 2-3 messages you've sent that got good responses. This is how Sammy learns to sound like you.</p></div>
                     <textarea value={answers.voice_examples} onChange={e => updateAnswer("voice_examples", e.target.value)}
-                      placeholder={"Hey Sarah — saw you just brought on 3 new people. Congrats! That's usually when task tracking starts breaking.\n\n---\n\nQuick one — noticed your team's growing fast. Most founders at your stage spend 5+ hours/week just keeping everyone aligned."}
+                      placeholder={"Hey Sarah.saw you just brought on 3 new people. Congrats! That's usually when task tracking starts breaking.\n\n---\n\nQuick one.noticed your team's growing fast. Most founders at your stage spend 5+ hours/week just keeping everyone aligned."}
                       rows={8} className="w-full bg-secondary rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary/20 resize-none" />
                   </div>
                 )}
 
                 {step === 7 && (
                   <div className="space-y-6">
-                    <div><h2 className="font-display text-2xl font-bold text-foreground">Anything off-limits?</h2><p className="text-sm text-muted-foreground mt-2">Things your teammate should never say or promise.</p></div>
+                    <div><h2 className="font-display text-2xl font-bold text-foreground">Anything off-limits?</h2><p className="text-sm text-muted-foreground mt-2">Things Sammy should never say or promise.</p></div>
                     <textarea value={answers.guardrails} onChange={e => updateAnswer("guardrails", e.target.value)}
                       placeholder={"Never discuss competitor pricing\nDon't promise custom features\nDon't commit to delivery timelines"}
                       rows={5} className="w-full bg-secondary rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary/20 resize-none" />
@@ -229,20 +230,20 @@ const Onboarding = () => {
 
                 {step === 8 && (
                   <div className="space-y-6">
-                    <div><h2 className="font-display text-2xl font-bold text-foreground">Who should your teammate escalate to?</h2><p className="text-sm text-muted-foreground mt-2">When a lead asks something beyond scope, who gets the ping?</p></div>
+                    <div><h2 className="font-display text-2xl font-bold text-foreground">Who should Sammy escalate to?</h2><p className="text-sm text-muted-foreground mt-2">When a lead asks something beyond scope, who gets the ping?</p></div>
                     <textarea value={answers.escalation} onChange={e => updateAnswer("escalation", e.target.value)}
-                      placeholder="Alex — alex@company.com — ping on Slack or email"
+                      placeholder="Alex.alex@company.com.ping on Slack or email"
                       rows={3} className="w-full bg-secondary rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary/20 resize-none" />
                   </div>
                 )}
 
                 {step === 9 && (
                   <div className="space-y-6">
-                    <div><h2 className="font-display text-2xl font-bold text-foreground">Your teammate is ready</h2><p className="text-sm text-muted-foreground mt-2">Here's a sample message. This is how they'll sound.</p></div>
+                    <div><h2 className="font-display text-2xl font-bold text-foreground">Sammy is ready</h2><p className="text-sm text-muted-foreground mt-2">Here's a sample message. This is how they'll sound.</p></div>
                     <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center"><Bot className="w-5 h-5 text-primary" /></div>
-                        <div><p className="text-sm font-semibold text-foreground">Your Teammate</p><p className="text-[10px] text-muted-foreground">Sample first-touch message</p></div>
+                        <div><p className="text-sm font-semibold text-foreground">Sammy</p><p className="text-[10px] text-muted-foreground">Sample first-touch message</p></div>
                       </div>
                       <div className="bg-secondary rounded-xl px-4 py-3">
                         <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{sampleMessage || "Setting up..."}</p>
@@ -252,7 +253,7 @@ const Onboarding = () => {
                       <div className="flex items-center gap-2 mb-2"><CheckCircle2 className="w-4 h-4 text-success" /><p className="text-sm font-medium text-foreground">Setup Complete</p></div>
                       <ul className="text-xs text-muted-foreground space-y-1 ml-6">
                         <li>Business context captured</li><li>Voice calibrated from your samples</li>
-                        <li>Channels: {selectedChannels.join(", ")}</li><li>Starting in Shadow Mode — all messages need your approval</li>
+                        <li>Channels: {selectedChannels.join(", ")}</li><li>Starting in Shadow Mode.all messages need your approval</li>
                       </ul>
                     </div>
                   </div>

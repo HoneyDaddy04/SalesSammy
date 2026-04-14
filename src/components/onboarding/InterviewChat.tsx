@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Send, Bot, User, Loader2 } from "lucide-react";
 import { startOnboarding, answerOnboarding, sendOnboardingFeedback } from "@/services/api";
 import { cn } from "@/lib/utils";
+import { ORG_KEY } from "@/lib/constants";
 import logo from "@/assets/logo.png";
 
 interface Message {
@@ -47,7 +48,7 @@ const InterviewChat = () => {
       setTotalQuestions(res.total_questions);
       setStep("interview");
       setMessages([{ id: "start", role: "assistant", content: res.message }]);
-      localStorage.setItem("vaigence_org_id", res.org_id);
+      localStorage.setItem(ORG_KEY, res.org_id);
     } catch (err) {
       console.error(err);
     } finally {
@@ -67,7 +68,7 @@ const InterviewChat = () => {
         await sendOnboardingFeedback(orgId, text);
         setMessages((prev) => [
           ...prev,
-          { id: `a-${Date.now()}`, role: "assistant", content: "Got it — I'll adjust based on your feedback. Let's get to work." },
+          { id: `a-${Date.now()}`, role: "assistant", content: "Got it.I'll adjust based on your feedback. Let's get to work." },
         ]);
         setStep("done");
         setTimeout(() => navigate("/dashboard"), 2000);
@@ -101,7 +102,7 @@ const InterviewChat = () => {
         >
           <div className="text-center">
             <img src={logo} alt="Vaigence" className="w-12 h-12 mx-auto mb-4" />
-            <h1 className="font-display text-2xl font-bold text-foreground">Hire your AI Teammate</h1>
+            <h1 className="font-display text-2xl font-bold text-foreground">Hire Sales Sammy</h1>
             <p className="text-sm text-muted-foreground mt-2">
               Quick interview to learn your business. Takes about 15 minutes.
             </p>
@@ -152,7 +153,7 @@ const InterviewChat = () => {
         <div className="flex items-center gap-3">
           <img src={logo} alt="Vaigence" className="w-8 h-8" />
           <div>
-            <h1 className="font-display text-sm font-bold text-foreground">Teammate Interview</h1>
+            <h1 className="font-display text-sm font-bold text-foreground">Sammy Interview</h1>
             <p className="text-[10px] text-muted-foreground">
               {step === "done"
                 ? "All set!"

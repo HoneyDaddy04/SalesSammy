@@ -10,4 +10,5 @@ export const config = {
   anthropicApiKey: process.env.ANTHROPIC_API_KEY || "",
   databasePath: process.env.DATABASE_PATH || "./data/vaigence.db",
   corsOrigin: process.env.CORS_ORIGIN || "http://localhost:8080",
+  vaultKey: process.env.VAULT_KEY || "",
 };

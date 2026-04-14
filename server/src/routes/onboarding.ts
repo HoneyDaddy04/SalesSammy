@@ -11,15 +11,15 @@ const anthropic = new Anthropic({ apiKey: config.anthropicApiKey });
 const QUESTIONS = [
   {
     key: "business_description",
-    question: "So tell me — what does your business do? Just a paragraph is fine, like you'd explain it to someone at a coffee shop.",
+    question: "So tell me - what does your business do? Just a paragraph is fine, like you'd explain it to someone at a coffee shop.",
   },
   {
     key: "target_audience",
-    question: "Who are you trying to reach? What kind of person or company? Think role, industry, size — whatever matters.",
+    question: "Who are you trying to reach? What kind of person or company? Think role, industry, size - whatever matters.",
   },
   {
     key: "lead_source_type",
-    question: "How do these people usually come to you? Cold outreach, inbound from your site, DMs, referrals, abandoned carts — what's the main way?",
+    question: "How do these people usually come to you? Cold outreach, inbound from your site, DMs, referrals, abandoned carts - what's the main way?",
   },
   {
     key: "lead_trigger_signals",
@@ -27,7 +27,7 @@ const QUESTIONS = [
   },
   {
     key: "goal",
-    question: "What do you want them to do? Book a call, buy something, reply, visit a page — what's the win?",
+    question: "What do you want them to do? Book a call, buy something, reply, visit a page - what's the win?",
   },
   {
     key: "lead_source",
@@ -35,11 +35,11 @@ const QUESTIONS = [
   },
   {
     key: "channels",
-    question: "Where do you message them? Email, WhatsApp, Instagram DMs, LinkedIn, SMS — which channels do you use or want to use?",
+    question: "Where do you message them? Email, WhatsApp, Instagram DMs, LinkedIn, SMS - which channels do you use or want to use?",
   },
   {
     key: "voice_examples",
-    question: "This one really matters — can you share 2 or 3 messages you've sent that got good responses? Paste them in. I'll learn your voice from these.",
+    question: "This one really matters - can you share 2 or 3 messages you've sent that got good responses? Paste them in. I'll learn your voice from these.",
   },
   {
     key: "guardrails",
@@ -47,11 +47,11 @@ const QUESTIONS = [
   },
   {
     key: "escalation",
-    question: "Last one — who should I ping when I need help? Give me a name, email, and how you want me to reach them.",
+    question: "Last one - who should I ping when I need help? Give me a name, email, and how you want me to reach them.",
   },
 ];
 
-/** POST /api/onboarding/start — create org + start interview */
+/** POST /api/onboarding/start - create org + start interview */
 router.post("/start", async (req, res) => {
   const { user_name, user_email, company_name } = req.body;
   if (!company_name) {
@@ -71,13 +71,13 @@ router.post("/start", async (req, res) => {
   res.json({
     org_id: orgId,
     session_id: sessionId,
-    message: `Hey ${user_name || "there"}! I'm your new teammate. Before I start working, I need to learn about your business. 10 quick questions — takes about 15 minutes.\n\nLet's go.\n\n${QUESTIONS[0].question}`,
+    message: `Hey ${user_name || "there"}! I'm your new teammate. Before I start working, I need to learn about your business. 10 quick questions - takes about 15 minutes.\n\nLet's go.\n\n${QUESTIONS[0].question}`,
     question_index: 0,
     total_questions: QUESTIONS.length,
   });
 });
 
-/** POST /api/onboarding/answer — answer current question, get next */
+/** POST /api/onboarding/answer - answer current question, get next */
 router.post("/answer", async (req, res) => {
   const { session_id, answer } = req.body;
   if (!session_id || !answer) {
@@ -118,7 +118,7 @@ router.post("/answer", async (req, res) => {
       complete: false,
     });
   } else {
-    // All questions answered — generate persona and create teammate
+    // All questions answered - generate persona and create teammate
     run(
       `UPDATE onboarding_sessions SET current_question = ?, answers = ?, status = 'complete' WHERE id = ?`,
       [nextQ, JSON.stringify(answers), session_id]
@@ -139,7 +139,7 @@ router.post("/answer", async (req, res) => {
   }
 });
 
-/** POST /api/onboarding/feedback — feedback on the sample message */
+/** POST /api/onboarding/feedback - feedback on the sample message */
 router.post("/feedback", async (req, res) => {
   const { org_id, feedback } = req.body;
   if (!org_id) {
@@ -160,7 +160,7 @@ router.post("/feedback", async (req, res) => {
     run(`UPDATE teammate SET operating_instructions = ? WHERE id = ?`, [instructions, teammate.id]);
   }
 
-  res.json({ status: "ok", message: "Got it — I'll adjust based on your feedback. Ready to get to work." });
+  res.json({ status: "ok", message: "Got it - I'll adjust based on your feedback. Ready to get to work." });
 });
 
 // --- Helpers ---

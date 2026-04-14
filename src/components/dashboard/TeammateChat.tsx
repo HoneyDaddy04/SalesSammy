@@ -4,7 +4,7 @@ import { Send, Bot, User, Loader2 } from "lucide-react";
 import { chatWithTeammate } from "@/services/api";
 import { cn } from "@/lib/utils";
 
-const ORG_KEY = "vaigence_org_id";
+import { ORG_KEY } from "@/lib/constants";
 
 interface Message {
   id: string;
@@ -15,7 +15,7 @@ interface Message {
 const TeammateChat = () => {
   const orgId = localStorage.getItem(ORG_KEY) || "";
   const [messages, setMessages] = useState<Message[]>([
-    { id: "welcome", role: "assistant", content: "Hey! I'm your follow-up teammate. You can adjust how I work by just telling me.\n\nTry things like:\n- \"be more casual on WhatsApp\"\n- \"never mention pricing\"\n- \"show me what tomorrow's sends look like\"\n- \"always mention our 30-day guarantee\"" },
+    { id: "welcome", role: "assistant", content: "Hey! I'm Sammy, your sales agent. You can adjust how I work by just telling me.\n\nTry things like:\n- \"be more casual on WhatsApp\"\n- \"never mention pricing\"\n- \"show me what tomorrow's sends look like\"\n- \"always mention our 30-day guarantee\"" },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -43,7 +43,7 @@ const TeammateChat = () => {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="font-display text-2xl font-bold text-foreground">Chat with Teammate</h2>
+        <h2 className="font-display text-2xl font-bold text-foreground">Chat with Sammy</h2>
         <p className="text-sm text-muted-foreground mt-1">Adjust behavior, ask questions, give feedback</p>
       </div>
 

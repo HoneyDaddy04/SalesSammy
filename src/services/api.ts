@@ -117,28 +117,88 @@ export interface ApiContact {
   id: string;
   name: string;
   email: string;
+  phone: string | null;
   company: string;
+  role: string | null;
+  linkedin: string | null;
+  website: string | null;
+  industry: string | null;
+  company_size: string | null;
+  tags: string;
+  notes: string;
+  lead_score: number;
+  source: string;
+  source_detail: string | null;
   status: string;
   touch_index: number;
+  last_touch_at: string | null;
   next_touch_at: string | null;
   sequence_name: string;
+  available_channels: string;
   metadata: string;
+  created_at: string;
+  updated_at: string;
 }
 
-export function fetchContacts(orgId: string, status?: string): Promise<ApiContact[]> {
-  const qs = status ? `&status=${status}` : "";
-  return request(`/api/contacts?org_id=${orgId}${qs}`);
+export interface ContactDetail {
+  contact: ApiContact;
+  touchStats: { total_touches: number; sent: number; pending: number };
+  replyStats: { total_replies: number; positive: number; questions: number; objections: number };
+  activity: Array<{ id: string; action: string; detail: string; status: string; created_at: string }>;
 }
 
-export function importContacts(orgId: string, contacts: Record<string, unknown>[], sequenceKey?: string): Promise<{ imported: number }> {
+export function fetchContacts(orgId: string, params?: { status?: string; source?: string; search?: string; sort?: string; tag?: string }): Promise<ApiContact[]> {
+  const qs = new URLSearchParams({ org_id: orgId });
+  if (params?.status) qs.set("status", params.status);
+  if (params?.source) qs.set("source", params.source);
+  if (params?.search) qs.set("search", params.search);
+  if (params?.sort) qs.set("sort", params.sort);
+  if (params?.tag) qs.set("tag", params.tag);
+  return request(`/api/contacts?${qs.toString()}`);
+}
+
+export function fetchContactDetail(contactId: string): Promise<ContactDetail> {
+  return request(`/api/contacts/${contactId}`);
+}
+
+export function importContacts(orgId: string, contacts: Record<string, unknown>[], opts?: { sequenceKey?: string; source?: string }): Promise<{ imported: number }> {
   return request("/api/contacts/import", {
     method: "POST",
-    body: JSON.stringify({ org_id: orgId, contacts, sequence_key: sequenceKey }),
+    body: JSON.stringify({ org_id: orgId, contacts, sequence_key: opts?.sequenceKey, source: opts?.source }),
+  });
+}
+
+export function updateContact(contactId: string, data: Partial<ApiContact>): Promise<ApiContact> {
+  return request(`/api/contacts/${contactId}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export function addContactNote(contactId: string, note: string): Promise<{ status: string }> {
+  return request(`/api/contacts/${contactId}/note`, {
+    method: "POST",
+    body: JSON.stringify({ note }),
+  });
+}
+
+export function tagContact(contactId: string, add?: string, remove?: string): Promise<{ tags: string[] }> {
+  return request(`/api/contacts/${contactId}/tag`, {
+    method: "POST",
+    body: JSON.stringify({ add, remove }),
   });
 }
 
 export function fetchContactThread(contactId: string): Promise<{ contact: ApiContact; timeline: Record<string, unknown>[] }> {
   return request(`/api/contacts/${contactId}/thread`);
+}
+
+export function fetchContactSources(orgId: string): Promise<Array<{ source: string; count: number }>> {
+  return request(`/api/contacts/sources/summary?org_id=${orgId}`);
+}
+
+export function fetchContactTags(orgId: string): Promise<string[]> {
+  return request(`/api/contacts/tags/all?org_id=${orgId}`);
 }
 
 // --- Activity ---
@@ -163,7 +223,7 @@ export interface StandupData {
   touches_sent: number;
   replies_received: number;
   positive_replies: number;
-  meetings_booked: number;
+  conversions: number;
   needs_you: number;
   planned_today: number;
   recent_activity: ActivityEntry[];

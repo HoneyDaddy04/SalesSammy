@@ -3,7 +3,7 @@ import { queryOne, queryAll } from "../db/database.js";
 
 const router = Router();
 
-/** GET /api/standup?org_id=xxx — today's standup report */
+/** GET /api/standup?org_id=xxx - today's standup report */
 router.get("/", (req, res) => {
   const orgId = req.query.org_id as string;
   if (!orgId) { res.status(400).json({ error: "org_id required" }); return; }
@@ -46,7 +46,7 @@ router.get("/", (req, res) => {
     touches_sent: (sent?.count as number) || 0,
     replies_received: repliesAll.length,
     positive_replies: positiveReplies,
-    meetings_booked: 0, // TODO: track via calendar adapter
+    conversions: 0, // TODO: track via conversion_action on contacts
     needs_you: (pending?.count as number) || 0,
     escalations: (escalated?.count as number) || 0,
     planned_today: (plannedToday?.count as number) || 0,

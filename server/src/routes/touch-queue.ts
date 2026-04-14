@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { queryAll, queryOne, run } from "../db/database.js";
 import { v4 as uuid } from "uuid";
+import { enqueue } from "../services/job-queue.js";
 
 const router = Router();
 
@@ -37,7 +38,8 @@ router.post("/:id/approve", (req, res) => {
 
   run(`UPDATE touch_queue SET status = 'sent', sent_at = datetime('now') WHERE id = ?`, [req.params.id]);
 
-  // TODO: Actually send via channel adapter
+  // Enqueue actual send via channel plugin
+  enqueue(item.org_id as string, "send_touch", { touchQueueId: req.params.id });
 
   // Log activity
   const contact = queryOne(`SELECT name FROM contacts WHERE id = ?`, [item.contact_id]);
