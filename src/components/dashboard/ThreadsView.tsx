@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import {
   Users, Mail, Loader2, Plus, Upload, Search, X, MessageCircle, Phone, Linkedin,
   Send, Filter, ArrowUpDown, Hash, Building2, Globe, Briefcase, Calendar,
-  ChevronRight, TrendingUp, Webhook, FileSpreadsheet, Database, Bell, Eye, Clock
+  ChevronRight, TrendingUp, Webhook, FileSpreadsheet, Database, Bell, Eye, Clock, Info
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -166,7 +166,9 @@ const ThreadsView = () => {
     );
   }
 
-  const scoreColor = (s: number) => s >= 70 ? "text-success" : s >= 40 ? "text-warning" : "text-muted-foreground";
+  // Convert raw score (0-65) to percentage and color
+  const scorePercent = (raw: number) => Math.min(100, Math.round((raw / 65) * 100));
+  const scoreColor = (raw: number) => { const p = scorePercent(raw); return p >= 70 ? "text-success" : p >= 40 ? "text-warning" : "text-muted-foreground"; };
 
   const statusCounts = contacts.reduce((acc, c) => { acc[c.status] = (acc[c.status] || 0) + 1; return acc; }, {} as Record<string, number>);
   const sourceCounts = contacts.reduce((acc, c) => { acc[c.source] = (acc[c.source] || 0) + 1; return acc; }, {} as Record<string, number>);
@@ -420,7 +422,16 @@ const ThreadsView = () => {
         <div className="px-5 py-3 bg-secondary/50 border-b border-border grid grid-cols-12 gap-4 items-center text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
           <div className="col-span-3">Contact</div>
           <div className="col-span-2">Company</div>
-          <div className="col-span-1">Score</div>
+          <div className="col-span-1 flex items-center gap-1 group relative">
+            Score
+            <span className="relative">
+              <Info className="w-3 h-3 text-muted-foreground/50 cursor-help" />
+              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 px-3 py-2 rounded-lg bg-foreground text-background text-[10px] leading-relaxed opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 shadow-lg">
+                <strong className="block mb-1">How lead score works</strong>
+                Based on data completeness: email (+23%), phone (+15%), company (+15%), LinkedIn (+8%), role (+8%). Inbound leads start higher. Score updates as Sammy learns more.
+              </span>
+            </span>
+          </div>
           <div className="col-span-1">Source</div>
           <div className="col-span-1">Status</div>
           <div className="col-span-1">Channels</div>
@@ -498,7 +509,7 @@ const ThreadsView = () => {
               {/* Score */}
               <div className="col-span-1">
                 <span className={cn("text-sm font-bold font-display", scoreColor(contact.lead_score))}>
-                  {contact.lead_score}
+                  {scorePercent(contact.lead_score)}%
                 </span>
               </div>
 

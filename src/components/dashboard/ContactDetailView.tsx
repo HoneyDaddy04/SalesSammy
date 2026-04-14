@@ -194,7 +194,8 @@ const ContactDetailView = ({ contactId, onBack, onRefresh }: ContactDetailViewPr
     } catch (err) { toast.error("Failed to remove tag"); }
   };
 
-  const scoreColor = contact.lead_score >= 70 ? "text-success" : contact.lead_score >= 40 ? "text-warning" : "text-muted-foreground";
+  const scorePercent = Math.min(100, Math.round((contact.lead_score / 65) * 100));
+  const scoreColor = scorePercent >= 70 ? "text-success" : scorePercent >= 40 ? "text-warning" : "text-muted-foreground";
   const sourceInfo = sourceIcons[contact.source] || { label: contact.source, color: "bg-secondary text-muted-foreground" };
   const addedDate = new Date(contact.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   const updatedDate = contact.updated_at ? new Date(contact.updated_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null;
@@ -309,7 +310,7 @@ const ContactDetailView = ({ contactId, onBack, onRefresh }: ContactDetailViewPr
       {/* Stats Row */}
       <div className="grid grid-cols-5 gap-4">
         {[
-          { label: "Lead Score", value: `${contact.lead_score}/100`, icon: TrendingUp, color: scoreColor },
+          { label: "Lead Score", value: `${scorePercent}%`, icon: TrendingUp, color: scoreColor },
           { label: "Touches Sent", value: touchStats.sent || 0, icon: Send, color: "text-primary" },
           { label: "Pending", value: touchStats.pending || 0, icon: Clock, color: "text-warning" },
           { label: "Replies", value: replyStats.total_replies || 0, icon: ArrowDownLeft, color: "text-success" },
