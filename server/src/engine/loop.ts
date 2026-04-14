@@ -21,7 +21,7 @@ export async function runAgentCycle(agentRow: Record<string, unknown>): Promise<
   const agent = parseAgentRow(agentRow);
   let workCreated = 0;
 
-  logActivity(agent, null, `Starting scan cycle`, agent.triggers.length + " triggers to check", "info");
+  await logActivity(agent, null, `Starting scan cycle`, agent.triggers.length + " triggers to check", "info");
 
   for (const trigger of agent.triggers) {
     try {
@@ -30,7 +30,7 @@ export async function runAgentCycle(agentRow: Record<string, unknown>): Promise<
 
       for (const target of targets) {
         // 2. DEDUPE — don't create duplicate work items
-        const existing = queryOne(
+        const existing = await queryOne(
           `SELECT id FROM work_items WHERE agent_id = ? AND json_extract(target, '$.id') = ? AND status NOT IN ('executed', 'rejected', 'failed')`,
           [agent.id, target.id]
         );
@@ -39,24 +39,24 @@ export async function runAgentCycle(agentRow: Record<string, unknown>): Promise<
         const workItemId = uuid();
 
         // Create work item in "discovered" state
-        run(
+        await run(
           `INSERT INTO work_items (id, org_id, agent_id, trigger_type, target, status) VALUES (?, ?, ?, ?, ?, 'discovered')`,
           [workItemId, agent.org_id, agent.id, trigger.type, JSON.stringify(target)]
         );
 
-        logActivity(agent, workItemId, `Found ${target.type}: ${target.name}`, `Trigger: ${trigger.type}`, "info");
+        await logActivity(agent, workItemId, `Found ${target.type}: ${target.name}`, `Trigger: ${trigger.type}`, "info");
 
         // 3. RESEARCH
-        run(`UPDATE work_items SET status = 'researching', updated_at = datetime('now') WHERE id = ?`, [workItemId]);
+        await run(`UPDATE work_items SET status = 'researching', updated_at = NOW() WHERE id = ?`, [workItemId]);
 
         const researchContext = await runResearch(agent.research, target, agent.org_id);
 
-        run(
-          `UPDATE work_items SET research_context = ?, updated_at = datetime('now') WHERE id = ?`,
+        await run(
+          `UPDATE work_items SET research_context = ?, updated_at = NOW() WHERE id = ?`,
           [researchContext, workItemId]
         );
 
-        logActivity(agent, workItemId, `Researched ${target.name}`, `Gathered context from ${agent.research.length} sources`, "info");
+        await logActivity(agent, workItemId, `Researched ${target.name}`, `Gathered context from ${agent.research.length} sources`, "info");
 
         // 4. DRAFT
         const proposedAction = await draftAction(
@@ -70,36 +70,36 @@ export async function runAgentCycle(agentRow: Record<string, unknown>): Promise<
 
         // 5. ROUTE
         if (agent.approval_required) {
-          run(
-            `UPDATE work_items SET status = 'pending_approval', proposed_action = ?, updated_at = datetime('now') WHERE id = ?`,
+          await run(
+            `UPDATE work_items SET status = 'pending_approval', proposed_action = ?, updated_at = NOW() WHERE id = ?`,
             [JSON.stringify(proposedAction), workItemId]
           );
-          logActivity(agent, workItemId, `Drafted message for ${target.name} — awaiting approval`, proposedAction.content.slice(0, 100), "pending");
+          await logActivity(agent, workItemId, `Drafted message for ${target.name} — awaiting approval`, proposedAction.content.slice(0, 100), "pending");
         } else {
           // Auto-execute
-          run(
-            `UPDATE work_items SET status = 'approved', proposed_action = ?, updated_at = datetime('now') WHERE id = ?`,
+          await run(
+            `UPDATE work_items SET status = 'approved', proposed_action = ?, updated_at = NOW() WHERE id = ?`,
             [JSON.stringify(proposedAction), workItemId]
           );
 
           const result = await executeAction(proposedAction, target);
 
-          run(
-            `UPDATE work_items SET status = 'executed', result = ?, updated_at = datetime('now') WHERE id = ?`,
+          await run(
+            `UPDATE work_items SET status = 'executed', result = ?, updated_at = NOW() WHERE id = ?`,
             [result, workItemId]
           );
-          logActivity(agent, workItemId, `Sent ${proposedAction.type.replace("_", " ")} to ${target.name}`, result, "success");
+          await logActivity(agent, workItemId, `Sent ${proposedAction.type.replace("_", " ")} to ${target.name}`, result, "success");
         }
 
         workCreated++;
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";
-      logActivity(agent, null, `Error evaluating trigger ${trigger.type}`, msg, "error");
+      await logActivity(agent, null, `Error evaluating trigger ${trigger.type}`, msg, "error");
     }
   }
 
-  logActivity(agent, null, `Scan complete — ${workCreated} new work items`, "", "info");
+  await logActivity(agent, null, `Scan complete — ${workCreated} new work items`, "", "info");
   return workCreated;
 }
 
@@ -107,7 +107,7 @@ export async function runAgentCycle(agentRow: Record<string, unknown>): Promise<
  * Run all active agents in the org.
  */
 export async function runAllAgents(orgId: string): Promise<Record<string, number>> {
-  const agents = queryAll(`SELECT * FROM agents WHERE org_id = ? AND status = 'active'`, [orgId]);
+  const agents = await queryAll(`SELECT * FROM agents WHERE org_id = ? AND status = 'active'`, [orgId]);
   const results: Record<string, number> = {};
 
   for (const agent of agents) {
@@ -120,8 +120,8 @@ export async function runAllAgents(orgId: string): Promise<Record<string, number
 /**
  * Start the scheduler that runs agents on their configured intervals.
  */
-export function startScheduler(orgId: string) {
-  const agents = queryAll(`SELECT * FROM agents WHERE org_id = ? AND status = 'active'`, [orgId]);
+export async function startScheduler(orgId: string) {
+  const agents = await queryAll(`SELECT * FROM agents WHERE org_id = ? AND status = 'active'`, [orgId]);
 
   for (const agentRow of agents) {
     const agent = parseAgentRow(agentRow);
@@ -162,14 +162,14 @@ function parseAgentRow(row: Record<string, unknown>) {
   };
 }
 
-function logActivity(
+async function logActivity(
   agent: { id: string; org_id: string; name: string },
   workItemId: string | null,
   action: string,
   detail: string,
   status: "info" | "success" | "warning" | "error" | "pending"
 ) {
-  run(
+  await run(
     `INSERT INTO activity_log (id, org_id, agent_id, agent_name, work_item_id, action, detail, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [uuid(), agent.org_id, agent.id, agent.name, workItemId, action, detail, status]
   );

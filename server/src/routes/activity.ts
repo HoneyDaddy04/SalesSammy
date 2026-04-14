@@ -4,7 +4,7 @@ import { queryAll } from "../db/database.js";
 const router = Router();
 
 /** GET /api/activity?org_id=xxx&limit=50 */
-router.get("/", (req, res) => {
+router.get("/", async (req, res) => {
   const orgId = req.query.org_id as string;
   const limit = parseInt((req.query.limit as string) || "50", 10);
 
@@ -22,7 +22,7 @@ router.get("/", (req, res) => {
   sql += ` ORDER BY created_at DESC LIMIT ?`;
   params.push(limit);
 
-  res.json(queryAll(sql, params));
+  res.json(await queryAll(sql, params));
 });
 
 export default router;

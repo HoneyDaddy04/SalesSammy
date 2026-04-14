@@ -10,12 +10,12 @@ router.post("/scan", async (req, res) => {
   const { org_id } = req.body;
   if (!org_id) { res.status(400).json({ error: "org_id required" }); return; }
 
-  const teammate = queryOne(`SELECT * FROM teammate WHERE org_id = ?`, [org_id]);
+  const teammate = await queryOne(`SELECT * FROM teammate WHERE org_id = ?`, [org_id]);
   if (!teammate) { res.status(400).json({ error: "No teammate configured" }); return; }
 
   const now = new Date().toISOString();
 
-  const dueContacts = queryAll(
+  const dueContacts = await queryAll(
     `SELECT c.*, s.touches as seq_touches, s.name as seq_name, s.id as seq_id
      FROM contacts c
      JOIN sequences s ON s.id = c.sequence_id
@@ -24,7 +24,7 @@ router.post("/scan", async (req, res) => {
   );
 
   // Activate queued contacts
-  run(`UPDATE contacts SET status = 'active' WHERE org_id = ? AND status = 'queued' AND next_touch_at <= ?`, [org_id, now]);
+  await run(`UPDATE contacts SET status = 'active' WHERE org_id = ? AND status = 'queued' AND next_touch_at <= ?`, [org_id, now]);
 
   const jobIds: string[] = [];
 
@@ -33,11 +33,11 @@ router.post("/scan", async (req, res) => {
     const touchIndex = contact.touch_index as number;
 
     if (touchIndex >= touches.length) {
-      run(`UPDATE contacts SET status = 'completed' WHERE id = ?`, [contact.id]);
+      await run(`UPDATE contacts SET status = 'completed' WHERE id = ?`, [contact.id]);
       continue;
     }
 
-    const jobId = enqueue(org_id, "draft_touch", {
+    const jobId = await enqueue(org_id, "draft_touch", {
       contactId: contact.id,
       sequenceId: contact.seq_id,
       touchIndex,
@@ -46,7 +46,7 @@ router.post("/scan", async (req, res) => {
     jobIds.push(jobId);
   }
 
-  run(
+  await run(
     `INSERT INTO activity_log (id, org_id, action, detail, status) VALUES (?, ?, ?, ?, 'info')`,
     [uuid(), org_id, `Scan complete`, `${dueContacts.length} contacts checked, ${jobIds.length} draft jobs queued`]
   );

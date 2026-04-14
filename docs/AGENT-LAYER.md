@@ -41,24 +41,45 @@ Any implementation that satisfies this interface can power Sammy.
 
 File: `server/src/agent/claude-agent.ts`
 
-Uses the Anthropic SDK (`@anthropic-ai/sdk`) to call Claude for:
-- Message drafting (Claude sonnet for speed, opus for quality)
-- Reply classification (rule-based first, Claude for ambiguous cases)
-- Memory extraction (auto-extracts key facts from conversations)
+Uses the Anthropic SDK (`@anthropic-ai/sdk`) with **Claude tool-calling** for intelligent, agent-driven research.
 
-### Research Flow
+### How Tool-Calling Works
 
-When `research()` is called, the agent:
+Instead of statically gathering all context and dumping it into a prompt, Claude DRIVES the research:
 
-1. **Loads contact info** from the database (name, company, role, tags, metadata)
-2. **Pulls conversation history** from touch_queue + reply_events (all previous messages)
-3. **Searches knowledge base** for relevant product info matching the contact's context
-4. **Checks web for news** about the contact's company (stub - ready for real API)
-5. **Checks LinkedIn** for recent activity (stub - ready for real API)
-6. **Checks channel history** across ALL channels (email, WhatsApp, LinkedIn, SMS, etc.)
-7. **Loads contact memories** from contact_memory table
-8. **Loads pattern insights** from pattern_insights table
-9. Returns all as `ResearchContext`
+1. We tell Claude about the contact and give it access to 8 tools
+2. Claude decides which tools to call based on what it needs
+3. We execute the tools and feed results back
+4. Claude may call more tools based on what it learned
+5. This loops up to 5 times until Claude has enough context
+6. Claude then drafts the message with full context
+
+This means Claude might decide: "This person is at a SaaS company, let me check the knowledge base for pricing... they have a LinkedIn, let me check that... they replied before about Jira, let me search for Jira migration info..."
+
+### Available Tools (8 total)
+
+| Tool | What it does |
+|------|-------------|
+| `get_conversation_history` | Full message thread across ALL channels |
+| `search_knowledge_base` | Search product info, pricing, FAQs |
+| `search_web` | Web search for company news (stub, ready for API) |
+| `check_linkedin` | LinkedIn profile check (stub, ready for API) |
+| `get_contact_memories` | Everything Sammy remembers about this person |
+| `get_pattern_insights` | Cross-contact learnings (what works) |
+| `pull_channel_history` | External channel history from before Sammy (stub) |
+| `save_memory` | Store a new fact/insight about the contact |
+
+### Research Flow (Agent-Driven)
+
+When `research()` is called:
+
+1. Loads contact info from database
+2. Sends Claude a prompt: "Research this contact. Here's what you know. Use tools to gather context."
+3. **Claude decides which tools to call** (not us)
+4. We execute tools, return results to Claude
+5. Claude may call more tools based on what it found (up to 5 loops)
+6. Claude signals it has enough context
+7. All tool results are collected into `ResearchContext`
 
 ### Draft Flow
 
@@ -67,9 +88,18 @@ When `draft()` is called:
 1. Loads teammate config (persona, voice samples, guardrails, operating instructions)
 2. Merges with per-context overrides (segment, sequence, channel specific)
 3. Builds a rich system prompt including full research context + memories
-4. Calls Claude with the prompt
-5. After drafting, auto-extracts key facts and stores to contact_memory
-6. Returns the draft content + research summary
+4. Single Claude call to draft the message (no tool-calling here, just generation)
+5. Rules enforce: no repeats, reference something specific, match angle/channel
+6. After drafting, auto-extracts key facts and stores to contact_memory
+7. Returns the draft content + research summary
+
+### Classification Flow (Hybrid)
+
+When `classifyReply()` is called:
+
+1. **Fast path (rule-based)**: Opt-out and hostile messages classified instantly, no Claude call
+2. **Guardrail check**: Always runs, forces escalation if guardrail keywords match
+3. **Claude path (ambiguous)**: For everything else, Claude classifies WITH memory context. If the contact previously showed interest, ambiguous replies lean positive.
 
 ---
 

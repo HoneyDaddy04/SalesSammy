@@ -4,37 +4,37 @@ import { queryAll, run } from "../db/database.js";
 
 const router = Router();
 
-router.post("/", (req, res) => {
+router.post("/", async (req, res) => {
   const { org_id, content, source, metadata } = req.body;
   if (!org_id || !content || !source) {
     res.status(400).json({ error: "Missing: org_id, content, source" });
     return;
   }
   const id = uuid();
-  run(
+  await run(
     `INSERT INTO knowledge_chunks (id, org_id, content, source, metadata) VALUES (?, ?, ?, ?, ?)`,
     [id, org_id, content, source, JSON.stringify(metadata || {})]
   );
   res.json({ id, status: "created" });
 });
 
-router.get("/", (req, res) => {
+router.get("/", async (req, res) => {
   const orgId = req.query.org_id as string;
   if (!orgId) { res.status(400).json({ error: "org_id required" }); return; }
-  res.json(queryAll(`SELECT * FROM knowledge_chunks WHERE org_id = ? ORDER BY created_at DESC`, [orgId]));
+  res.json(await queryAll(`SELECT * FROM knowledge_chunks WHERE org_id = ? ORDER BY created_at DESC`, [orgId]));
 });
 
 /** PUT /api/knowledge/:id */
-router.put("/:id", (req, res) => {
+router.put("/:id", async (req, res) => {
   const { content, source } = req.body;
   if (!content) { res.status(400).json({ error: "content required" }); return; }
-  run(`UPDATE knowledge_chunks SET content = ?, source = ? WHERE id = ?`, [content, source || "manual", req.params.id]);
+  await run(`UPDATE knowledge_chunks SET content = ?, source = ? WHERE id = ?`, [content, source || "manual", req.params.id]);
   res.json({ status: "updated" });
 });
 
 /** DELETE /api/knowledge/:id */
-router.delete("/:id", (req, res) => {
-  run(`DELETE FROM knowledge_chunks WHERE id = ?`, [req.params.id]);
+router.delete("/:id", async (req, res) => {
+  await run(`DELETE FROM knowledge_chunks WHERE id = ?`, [req.params.id]);
   res.json({ status: "deleted" });
 });
 

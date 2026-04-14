@@ -10,7 +10,7 @@ export interface MergedContext {
  * Merge base teammate persona/instructions with applicable context overrides.
  * Overrides match by sequence, channel, or contact tag (segment).
  */
-export function mergeContext(
+export async function mergeContext(
   orgId: string,
   basePersona: string,
   baseInstructions: string,
@@ -18,8 +18,8 @@ export function mergeContext(
   sequenceId: string | null,
   channel: string,
   contactTags: string[]
-): MergedContext {
-  const overrides = queryAll(
+): Promise<MergedContext> {
+  const overrides = await queryAll(
     `SELECT * FROM context_overrides WHERE org_id = ?`,
     [orgId]
   );

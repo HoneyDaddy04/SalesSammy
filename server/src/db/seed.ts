@@ -7,7 +7,7 @@ async function seed() {
   await runMigrations();
 
   const orgId = uuid();
-  run(`INSERT INTO organizations (id, name, industry) VALUES (?, ?, ?)`, [orgId, "FlowDesk", "SaaS"]);
+  await run(`INSERT INTO organizations (id, name, industry) VALUES (?, ?, ?)`, [orgId, "FlowDesk", "SaaS"]);
 
   // --- 5 Sequence Templates ---
   const sequences = [
@@ -24,11 +24,11 @@ async function seed() {
     { id: uuid(), template_key: "stalled_revival", name: "Stalled Lead Revival", description: "Leads that replied but went quiet. 3 touches over 21 days.",
       touches: [{ day_offset: 0, angle: "trigger_event", channel_tier: "primary" }, { day_offset: 10, angle: "different_angle", channel_tier: "secondary" }, { day_offset: 21, angle: "permission_to_close", channel_tier: "primary" }] },
   ];
-  for (const s of sequences) run(`INSERT INTO sequences (id, template_key, name, description, touches) VALUES (?, ?, ?, ?, ?)`, [s.id, s.template_key, s.name, s.description, JSON.stringify(s.touches)]);
+  for (const s of sequences) await run(`INSERT INTO sequences (id, template_key, name, description, touches) VALUES (?, ?, ?, ?, ?)`, [s.id, s.template_key, s.name, s.description, JSON.stringify(s.touches)]);
 
   // --- Teammate ---
   const teammateId = uuid();
-  run(`INSERT INTO teammate (id, org_id, business_description, target_audience, lead_trigger_signals, lead_source_type, goal, voice_examples, guardrails, escalation_contact, conversion_actions, persona_prompt, operating_instructions, primary_channel, secondary_channel, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+  await run(`INSERT INTO teammate (id, org_id, business_description, target_audience, lead_trigger_signals, lead_source_type, goal, voice_examples, guardrails, escalation_contact, conversion_actions, persona_prompt, operating_instructions, primary_channel, secondary_channel, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
     teammateId, orgId,
     "FlowDesk is a project management tool for teams of 5-30. We replace the mess of spreadsheets, Slack threads, and sticky notes with one clean workspace. Plans start at $29/month.",
     "Founders and ops leads at startups and small businesses. Usually 5-30 people, overwhelmed by too many tools, losing track of who's doing what.",
@@ -75,7 +75,7 @@ async function seed() {
   for (const c of contactData) {
     const cId = uuid();
     contactIds.push(cId);
-    run(`INSERT INTO contacts (id, org_id, name, email, phone, company, role, linkedin, website, industry, company_size, tags, notes, lead_score, source, source_detail, metadata, sequence_id, touch_index, last_touch_at, next_touch_at, status, available_channels, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    await run(`INSERT INTO contacts (id, org_id, name, email, phone, company, role, linkedin, website, industry, company_size, tags, notes, lead_score, source, source_detail, metadata, sequence_id, touch_index, last_touch_at, next_touch_at, status, available_channels, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [cId, orgId, c.name, c.email, c.phone, c.company, c.role, c.linkedin, c.website, c.industry, c.companySize, JSON.stringify(c.tags), "", c.score, c.source, c.sourceDetail, JSON.stringify(c.meta), c.seq, c.ti, c.lastTouch !== null ? daysAgo(c.lastTouch) : null, c.nextTouch !== null ? daysAgo(c.nextTouch) : null, c.status, JSON.stringify(c.channels), new Date().toISOString()]);
   }
 
@@ -110,7 +110,7 @@ async function seed() {
   ];
 
   for (const t of touchData) {
-    run(`INSERT INTO touch_queue (id, org_id, contact_id, sequence_id, touch_index, channel, angle, drafted_content, research_context, status, scheduled_for, sent_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    await run(`INSERT INTO touch_queue (id, org_id, contact_id, sequence_id, touch_index, channel, angle, drafted_content, research_context, status, scheduled_for, sent_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [uuid(), orgId, contactIds[t.contact], contactData[t.contact].seq, t.ti, t.channel, t.angle, t.content, t.research, t.status,
        daysAgo(t.scheduled), t.sent !== undefined ? daysAgo(t.sent) : null]);
   }
@@ -124,7 +124,7 @@ async function seed() {
   ];
 
   for (const r of replies) {
-    run(`INSERT INTO reply_events (id, org_id, contact_id, channel, content, classification, status) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    await run(`INSERT INTO reply_events (id, org_id, contact_id, channel, content, classification, status) VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [uuid(), orgId, contactIds[r.contact], r.channel, r.content, r.classification, r.status]);
   }
 
@@ -140,12 +140,12 @@ async function seed() {
   ];
 
   for (const i of integrations) {
-    run(`INSERT INTO integrations (id, org_id, type, category, status, credentials, last_synced_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    await run(`INSERT INTO integrations (id, org_id, type, category, status, credentials, last_synced_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [uuid(), orgId, i.type, i.category, i.status, JSON.stringify(i.creds), i.lastSync !== null ? daysAgo(i.lastSync) : null]);
   }
 
   // --- Subscription (growth plan, 87 touches used) ---
-  run(`INSERT INTO subscriptions (id, org_id, plan, status, touches_limit, touches_used, price_monthly) VALUES (?, ?, 'growth', 'active', 2000, 87, 14900)`, [uuid(), orgId]);
+  await run(`INSERT INTO subscriptions (id, org_id, plan, status, touches_limit, touches_used, price_monthly) VALUES (?, ?, 'growth', 'active', 2000, 87, 14900)`, [uuid(), orgId]);
 
   // --- Rich Activity Log ---
   const activityData = [
@@ -168,7 +168,7 @@ async function seed() {
 
   for (const a of activityData) {
     const ts = new Date(); ts.setHours(ts.getHours() - a.hoursAgo);
-    run(`INSERT INTO activity_log (id, org_id, action, detail, status, contact_name, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    await run(`INSERT INTO activity_log (id, org_id, action, detail, status, contact_name, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [uuid(), orgId, a.action, a.detail, a.status, a.contact, ts.toISOString()]);
   }
 
@@ -182,7 +182,7 @@ async function seed() {
   ];
 
   for (const k of knowledge) {
-    run(`INSERT INTO knowledge_chunks (id, org_id, content, source, metadata) VALUES (?, ?, ?, ?, '{}')`, [uuid(), orgId, k.content, k.source]);
+    await run(`INSERT INTO knowledge_chunks (id, org_id, content, source, metadata) VALUES (?, ?, ?, ?, '{}')`, [uuid(), orgId, k.content, k.source]);
   }
 
   console.log(`Seeded org: ${orgId}`);

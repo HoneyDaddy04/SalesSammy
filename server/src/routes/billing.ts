@@ -4,11 +4,11 @@ import { queryOne, run } from "../db/database.js";
 const router = Router();
 
 /** GET /api/billing?org_id=xxx - current plan and usage */
-router.get("/", (req, res) => {
+router.get("/", async (req, res) => {
   const orgId = req.query.org_id as string;
   if (!orgId) { res.status(400).json({ error: "org_id required" }); return; }
 
-  const sub = queryOne(`SELECT * FROM subscriptions WHERE org_id = ?`, [orgId]);
+  const sub = await queryOne(`SELECT * FROM subscriptions WHERE org_id = ?`, [orgId]);
   if (!sub) {
     res.json({
       plan: "starter",
@@ -25,7 +25,7 @@ router.get("/", (req, res) => {
 });
 
 /** POST /api/billing/upgrade - change plan */
-router.post("/upgrade", (req, res) => {
+router.post("/upgrade", async (req, res) => {
   const { org_id, plan } = req.body;
   if (!org_id || !plan) { res.status(400).json({ error: "org_id and plan required" }); return; }
 
@@ -38,7 +38,7 @@ router.post("/upgrade", (req, res) => {
   const planConfig = limits[plan];
   if (!planConfig) { res.status(400).json({ error: "Invalid plan" }); return; }
 
-  run(
+  await run(
     `UPDATE subscriptions SET plan = ?, touches_limit = ?, price_monthly = ? WHERE org_id = ?`,
     [plan, planConfig.limit, planConfig.price, org_id]
   );

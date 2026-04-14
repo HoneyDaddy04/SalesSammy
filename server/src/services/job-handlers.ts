@@ -45,15 +45,15 @@ async function handleDraftTouch(orgId: string, payload: {
 }): Promise<object> {
   const { contactId, sequenceId, touchIndex, seqTouches } = payload;
 
-  const teammate = queryOne(`SELECT * FROM teammate WHERE org_id = ?`, [orgId]);
+  const teammate = await queryOne(`SELECT * FROM teammate WHERE org_id = ?`, [orgId]);
   if (!teammate) throw new Error("No teammate configured");
 
-  const contact = queryOne(`SELECT * FROM contacts WHERE id = ?`, [contactId]);
+  const contact = await queryOne(`SELECT * FROM contacts WHERE id = ?`, [contactId]);
   if (!contact) throw new Error(`Contact ${contactId} not found`);
 
   const touches = JSON.parse(seqTouches);
   if (touchIndex >= touches.length) {
-    run(`UPDATE contacts SET status = 'completed' WHERE id = ?`, [contactId]);
+    await run(`UPDATE contacts SET status = 'completed' WHERE id = ?`, [contactId]);
     return { status: "completed", contactId };
   }
 
@@ -61,10 +61,10 @@ async function handleDraftTouch(orgId: string, payload: {
 
   // Smart channel resolution
   const contactChannels: string[] = (() => { try { return JSON.parse(contact.available_channels as string); } catch { return []; } })();
-  const connectedIntegrations = queryAll(
+  const connectedIntegrations = (await queryAll(
     `SELECT type FROM integrations WHERE org_id = ? AND category = 'channel' AND status = 'connected'`,
     [orgId]
-  ).map((i: any) => i.type as string);
+  )).map((i: any) => i.type as string);
   const connectedChannels = connectedIntegrations.map(t =>
     t === "gmail" || t === "outlook" ? "email" : t
   );
@@ -86,12 +86,12 @@ async function handleDraftTouch(orgId: string, payload: {
   const now = new Date().toISOString();
 
   const touchId = uuid();
-  run(
+  await run(
     `INSERT INTO touch_queue (id, org_id, contact_id, sequence_id, touch_index, channel, angle, drafted_content, research_context, status, scheduled_for) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending_approval', ?)`,
     [touchId, orgId, contactId, sequenceId, touchIndex, channel, touch.angle, draftedContent, researchContext, now]
   );
 
-  run(
+  await run(
     `INSERT INTO activity_log (id, org_id, action, detail, status, contact_name, touch_queue_id) VALUES (?, ?, ?, ?, 'pending', ?, ?)`,
     [uuid(), orgId, `Drafted touch ${touchIndex + 1} for ${contact.name}`, `${touch.angle.replace(/_/g, " ")} / ${channel}`, contact.name, touchId]
   );
@@ -103,7 +103,7 @@ async function handleDraftTouch(orgId: string, payload: {
 async function handleSendTouch(orgId: string, payload: {
   touchQueueId: string;
 }): Promise<object> {
-  const item = queryOne(`SELECT * FROM touch_queue WHERE id = ?`, [payload.touchQueueId]);
+  const item = await queryOne(`SELECT * FROM touch_queue WHERE id = ?`, [payload.touchQueueId]);
   if (!item) throw new Error("Touch queue item not found");
 
   const channelPlugin = getChannel(item.channel as string);
@@ -113,7 +113,7 @@ async function handleSendTouch(orgId: string, payload: {
 
   // Get decrypted credentials for this channel's integration
   const integrationType = item.channel === "email" ? "gmail" : item.channel;
-  const integration = queryOne(
+  const integration = await queryOne(
     `SELECT credentials FROM integrations WHERE org_id = ? AND type = ? AND status = 'connected'`,
     [orgId, integrationType]
   );
@@ -123,7 +123,7 @@ async function handleSendTouch(orgId: string, payload: {
     await channelPlugin.connect(creds);
   }
 
-  const contact = queryOne(`SELECT email, phone, linkedin FROM contacts WHERE id = ?`, [item.contact_id]);
+  const contact = await queryOne(`SELECT email, phone, linkedin FROM contacts WHERE id = ?`, [item.contact_id]);
   const recipient = item.channel === "email"
     ? (contact?.email as string)
     : item.channel === "linkedin"
@@ -152,7 +152,7 @@ async function handleClassifyInbound(orgId: string, payload: {
   const now = new Date().toISOString();
 
   // Load the inbound message
-  const msg = queryOne(`SELECT * FROM inbound_messages WHERE id = ?`, [messageId]);
+  const msg = await queryOne(`SELECT * FROM inbound_messages WHERE id = ?`, [messageId]);
   if (!msg) throw new Error(`Inbound message ${messageId} not found`);
 
   // ── Classification rules ──
@@ -176,7 +176,7 @@ async function handleClassifyInbound(orgId: string, payload: {
   }
 
   // Update inbound_messages with classification
-  run(
+  await run(
     `UPDATE inbound_messages SET classification = ?, routed_to = ? WHERE id = ?`,
     [classification, routedTo, messageId]
   );
@@ -184,7 +184,7 @@ async function handleClassifyInbound(orgId: string, payload: {
   // ── Handle by classification ──
 
   if (classification === "spam") {
-    run(
+    await run(
       `INSERT INTO activity_log (id, org_id, action, detail, status, created_at) VALUES (?, ?, ?, ?, 'info', ?)`,
       [uuid(), orgId, `Spam filtered from ${sender}`, `${channel}: ${content.substring(0, 80)}`, now]
     );
@@ -193,14 +193,14 @@ async function handleClassifyInbound(orgId: string, payload: {
 
   if (classification === "existing_customer_support") {
     // Try to match to existing contact
-    const existing = queryOne(
+    const existing = await queryOne(
       `SELECT * FROM contacts WHERE org_id = ? AND (email = ? OR phone = ?)`,
       [orgId, sender, sender]
     );
     if (existing) {
-      run(`UPDATE inbound_messages SET matched_contact_id = ? WHERE id = ?`, [existing.id, messageId]);
+      await run(`UPDATE inbound_messages SET matched_contact_id = ? WHERE id = ?`, [existing.id, messageId]);
     }
-    run(
+    await run(
       `INSERT INTO activity_log (id, org_id, action, detail, status, created_at) VALUES (?, ?, ?, ?, 'warning', ?)`,
       [uuid(), orgId, `Support inquiry from ${sender} via ${channel} - routing to team`, content.substring(0, 100), now]
     );
@@ -225,13 +225,13 @@ async function handleClassifyInbound(orgId: string, payload: {
   if (isEmail && !availableChannels.includes("email")) availableChannels.push("email");
 
   // Find a sequence to assign — prefer inbound_lead, fall back to any active sequence
-  const sequence = queryOne(
+  const sequence = await queryOne(
     `SELECT id FROM sequences WHERE template_key LIKE '%inbound%' AND active = 1 LIMIT 1`
-  ) || queryOne(
+  ) || await queryOne(
     `SELECT id FROM sequences WHERE active = 1 LIMIT 1`
   );
 
-  run(
+  await run(
     `INSERT INTO contacts (id, org_id, name, email, phone, lead_score, source, source_detail, status, available_channels, sequence_id, tags, metadata, touch_index, notes) VALUES (?, ?, ?, ?, ?, 25, ?, ?, 'active', ?, ?, '["inbound"]', '{}', 0, '')`,
     [
       contactId, orgId, contactName, contactEmail, contactPhone,
@@ -242,20 +242,20 @@ async function handleClassifyInbound(orgId: string, payload: {
   );
 
   // Update inbound_messages with matched contact
-  run(`UPDATE inbound_messages SET matched_contact_id = ? WHERE id = ?`, [contactId, messageId]);
+  await run(`UPDATE inbound_messages SET matched_contact_id = ? WHERE id = ?`, [contactId, messageId]);
 
   // Create a reply_event so the message shows in the thread
   const replyId = uuid();
-  run(
+  await run(
     `INSERT INTO reply_events (id, org_id, contact_id, channel, content, status, created_at) VALUES (?, ?, ?, ?, ?, 'pending', ?)`,
     [replyId, orgId, contactId, channel, content, now]
   );
 
   // Enqueue classify_reply so Sammy drafts a response
-  enqueue(orgId, "classify_reply", { replyId, contactId, orgId });
+  await enqueue(orgId, "classify_reply", { replyId, contactId, orgId });
 
   // Log activity
-  run(
+  await run(
     `INSERT INTO activity_log (id, org_id, action, detail, status, contact_name, created_at) VALUES (?, ?, ?, ?, 'info', ?, ?)`,
     [uuid(), orgId, `New lead captured from ${channel}: ${sender}`, content.substring(0, 100), contactName, now]
   );
@@ -271,10 +271,10 @@ async function handleClassifyReply(orgId: string, payload: {
 }): Promise<object> {
   const { replyId, contactId } = payload;
 
-  const reply = queryOne(`SELECT * FROM reply_events WHERE id = ?`, [replyId]);
+  const reply = await queryOne(`SELECT * FROM reply_events WHERE id = ?`, [replyId]);
   if (!reply) throw new Error(`Reply ${replyId} not found`);
 
-  const contact = queryOne(`SELECT * FROM contacts WHERE id = ?`, [contactId]);
+  const contact = await queryOne(`SELECT * FROM contacts WHERE id = ?`, [contactId]);
   const contactName = (contact?.name as string) || "Unknown";
   const content = reply.content as string;
   const now = new Date().toISOString();
@@ -285,28 +285,28 @@ async function handleClassifyReply(orgId: string, payload: {
   const routedAction = result.routedAction;
 
   // Update reply_events
-  run(
+  await run(
     `UPDATE reply_events SET classification = ?, routed_action = ?, status = 'handled' WHERE id = ?`,
     [classification, routedAction, replyId]
   );
 
   // Handle opt-out and escalation
   if (routedAction === "opt_out") {
-    run(`UPDATE contacts SET status = 'opted_out', updated_at = ? WHERE id = ?`, [now, contactId]);
-    run(
+    await run(`UPDATE contacts SET status = 'opted_out', updated_at = ? WHERE id = ?`, [now, contactId]);
+    await run(
       `INSERT INTO activity_log (id, org_id, action, detail, status, contact_name, created_at) VALUES (?, ?, ?, ?, 'warning', ?, ?)`,
       [uuid(), orgId, `${contactName} opted out`, `Reply classified as opt-out request`, contactName, now]
     );
   } else if (routedAction === "escalate") {
-    run(`UPDATE contacts SET status = 'escalated', updated_at = ? WHERE id = ?`, [now, contactId]);
-    run(
+    await run(`UPDATE contacts SET status = 'escalated', updated_at = ? WHERE id = ?`, [now, contactId]);
+    await run(
       `INSERT INTO activity_log (id, org_id, action, detail, status, contact_name, created_at) VALUES (?, ?, ?, ?, 'warning', ?, ?)`,
       [uuid(), orgId, `Reply from ${contactName} escalated`, `Classified as ${classification} — requires human review`, contactName, now]
     );
   } else if (routedAction === "draft_response") {
     // Enqueue draft reply job
-    enqueue(orgId, "draft_reply", { replyId, contactId });
-    run(
+    await enqueue(orgId, "draft_reply", { replyId, contactId });
+    await run(
       `INSERT INTO activity_log (id, org_id, action, detail, status, contact_name, created_at) VALUES (?, ?, ?, ?, 'info', ?, ?)`,
       [uuid(), orgId, `Reply from ${contactName} classified as ${classification}`, `Drafting response`, contactName, now]
     );
@@ -322,10 +322,10 @@ async function handleDraftReply(orgId: string, payload: {
 }): Promise<object> {
   const { replyId, contactId } = payload;
 
-  const reply = queryOne(`SELECT * FROM reply_events WHERE id = ?`, [replyId]);
+  const reply = await queryOne(`SELECT * FROM reply_events WHERE id = ?`, [replyId]);
   if (!reply) throw new Error(`Reply ${replyId} not found`);
 
-  const contact = queryOne(`SELECT * FROM contacts WHERE id = ?`, [contactId]);
+  const contact = await queryOne(`SELECT * FROM contacts WHERE id = ?`, [contactId]);
   const contactName = (contact?.name as string) || "Unknown";
   const now = new Date().toISOString();
 
@@ -337,15 +337,15 @@ async function handleDraftReply(orgId: string, payload: {
   const draftContent = draft.content;
 
   const touchId = uuid();
-  run(
+  await run(
     `INSERT INTO touch_queue (id, org_id, contact_id, channel, angle, drafted_content, status, scheduled_for) VALUES (?, ?, ?, ?, 'reply_response', ?, 'pending_approval', ?)`,
     [touchId, orgId, contactId, reply.channel as string, draftContent, now]
   );
 
   // Update reply status
-  run(`UPDATE reply_events SET auto_response_drafted = 1, status = 'handled' WHERE id = ?`, [replyId]);
+  await run(`UPDATE reply_events SET auto_response_drafted = 1, status = 'handled' WHERE id = ?`, [replyId]);
 
-  run(
+  await run(
     `INSERT INTO activity_log (id, org_id, action, detail, status, contact_name, touch_queue_id, created_at) VALUES (?, ?, ?, ?, 'pending', ?, ?, ?)`,
     [uuid(), orgId, `Draft response ready for ${contactName}`, `Reply to ${classification} message`, contactName, touchId, now]
   );

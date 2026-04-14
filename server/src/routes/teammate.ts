@@ -10,31 +10,31 @@ const router = Router();
 const anthropic = new Anthropic({ apiKey: config.anthropicApiKey });
 
 /** GET /api/teammate?org_id=xxx */
-router.get("/", (req, res) => {
+router.get("/", async (req, res) => {
   const orgId = req.query.org_id as string;
   if (!orgId) { res.status(400).json({ error: "org_id required" }); return; }
 
-  const teammate = queryOne(`SELECT * FROM teammate WHERE org_id = ?`, [orgId]);
+  const teammate = await queryOne(`SELECT * FROM teammate WHERE org_id = ?`, [orgId]);
   if (!teammate) { res.status(404).json({ error: "No teammate configured. Complete onboarding first." }); return; }
 
   res.json(teammate);
 });
 
 /** GET /api/teammate/stats?org_id=xxx - computed performance stats */
-router.get("/stats", (req, res) => {
+router.get("/stats", async (req, res) => {
   const orgId = req.query.org_id as string;
   if (!orgId) { res.status(400).json({ error: "org_id required" }); return; }
 
-  const totalContacts = queryOne(`SELECT COUNT(*) as c FROM contacts WHERE org_id = ?`, [orgId]);
-  const activeContacts = queryOne(`SELECT COUNT(*) as c FROM contacts WHERE org_id = ? AND status = 'active'`, [orgId]);
-  const repliedContacts = queryOne(`SELECT COUNT(*) as c FROM contacts WHERE org_id = ? AND status = 'replied'`, [orgId]);
-  const completedContacts = queryOne(`SELECT COUNT(*) as c FROM contacts WHERE org_id = ? AND status = 'completed'`, [orgId]);
-  const touchesSent = queryOne(`SELECT COUNT(*) as c FROM touch_queue WHERE org_id = ? AND status = 'sent'`, [orgId]);
-  const touchesPending = queryOne(`SELECT COUNT(*) as c FROM touch_queue WHERE org_id = ? AND status = 'pending_approval'`, [orgId]);
-  const totalTouches = queryOne(`SELECT COUNT(*) as c FROM touch_queue WHERE org_id = ?`, [orgId]);
-  const totalReplies = queryOne(`SELECT COUNT(*) as c FROM reply_events WHERE org_id = ?`, [orgId]);
-  const positiveReplies = queryOne(`SELECT COUNT(*) as c FROM reply_events WHERE org_id = ? AND classification = 'positive'`, [orgId]);
-  const escalations = queryOne(`SELECT COUNT(*) as c FROM reply_events WHERE org_id = ? AND status = 'escalated'`, [orgId]);
+  const totalContacts = await queryOne(`SELECT COUNT(*) as c FROM contacts WHERE org_id = ?`, [orgId]);
+  const activeContacts = await queryOne(`SELECT COUNT(*) as c FROM contacts WHERE org_id = ? AND status = 'active'`, [orgId]);
+  const repliedContacts = await queryOne(`SELECT COUNT(*) as c FROM contacts WHERE org_id = ? AND status = 'replied'`, [orgId]);
+  const completedContacts = await queryOne(`SELECT COUNT(*) as c FROM contacts WHERE org_id = ? AND status = 'completed'`, [orgId]);
+  const touchesSent = await queryOne(`SELECT COUNT(*) as c FROM touch_queue WHERE org_id = ? AND status = 'sent'`, [orgId]);
+  const touchesPending = await queryOne(`SELECT COUNT(*) as c FROM touch_queue WHERE org_id = ? AND status = 'pending_approval'`, [orgId]);
+  const totalTouches = await queryOne(`SELECT COUNT(*) as c FROM touch_queue WHERE org_id = ?`, [orgId]);
+  const totalReplies = await queryOne(`SELECT COUNT(*) as c FROM reply_events WHERE org_id = ?`, [orgId]);
+  const positiveReplies = await queryOne(`SELECT COUNT(*) as c FROM reply_events WHERE org_id = ? AND classification = 'positive'`, [orgId]);
+  const escalations = await queryOne(`SELECT COUNT(*) as c FROM reply_events WHERE org_id = ? AND status = 'escalated'`, [orgId]);
 
   const sent = (touchesSent?.c as number) || 0;
   const replies = (totalReplies?.c as number) || 0;
@@ -59,11 +59,11 @@ router.get("/stats", (req, res) => {
 });
 
 /** PUT /api/teammate - update teammate config fields */
-router.put("/", (req, res) => {
+router.put("/", async (req, res) => {
   const { org_id, ...updates } = req.body;
   if (!org_id) { res.status(400).json({ error: "org_id required" }); return; }
 
-  const teammate = queryOne(`SELECT * FROM teammate WHERE org_id = ?`, [org_id]);
+  const teammate = await queryOne(`SELECT * FROM teammate WHERE org_id = ?`, [org_id]);
   if (!teammate) { res.status(404).json({ error: "No teammate configured" }); return; }
 
   const allowedFields = [
@@ -98,37 +98,37 @@ router.put("/", (req, res) => {
     `Updated: ${Object.keys(updates).join(", ")}`, "user");
 
   values.push(teammate.id);
-  run(`UPDATE teammate SET ${setClauses.join(", ")} WHERE id = ?`, values);
+  await run(`UPDATE teammate SET ${setClauses.join(", ")} WHERE id = ?`, values);
 
-  const updated = queryOne(`SELECT * FROM teammate WHERE id = ?`, [teammate.id]);
+  const updated = await queryOne(`SELECT * FROM teammate WHERE id = ?`, [teammate.id]);
   res.json(updated);
 });
 
 /** GET /api/teammate/history?org_id=xxx - config revision history */
-router.get("/history", (req, res) => {
+router.get("/history", async (req, res) => {
   const orgId = req.query.org_id as string;
   if (!orgId) { res.status(400).json({ error: "org_id required" }); return; }
 
-  const teammate = queryOne(`SELECT id FROM teammate WHERE org_id = ?`, [orgId]);
+  const teammate = await queryOne(`SELECT id FROM teammate WHERE org_id = ?`, [orgId]);
   if (!teammate) { res.status(404).json({ error: "No teammate configured" }); return; }
 
-  res.json(getRevisions("teammate", teammate.id as string));
+  res.json(await getRevisions("teammate", teammate.id as string));
 });
 
 /** POST /api/teammate/rollback/:revisionId - restore a previous config */
-router.post("/rollback/:revisionId", (req, res) => {
-  const revision = getRevision(req.params.revisionId);
+router.post("/rollback/:revisionId", async (req, res) => {
+  const revision = await getRevision(req.params.revisionId);
   if (!revision) { res.status(404).json({ error: "Revision not found" }); return; }
 
   const snapshot = JSON.parse(revision.snapshot as string);
   const orgId = revision.org_id as string;
   const entityId = revision.entity_id as string;
 
-  const current = queryOne(`SELECT * FROM teammate WHERE id = ?`, [entityId]);
+  const current = await queryOne(`SELECT * FROM teammate WHERE id = ?`, [entityId]);
   if (!current) { res.status(404).json({ error: "Teammate not found" }); return; }
 
   // Snapshot current state before rollback
-  snapshotBeforeUpdate(orgId, "teammate", entityId, current as any,
+  await snapshotBeforeUpdate(orgId, "teammate", entityId, current as any,
     `Rollback to revision ${revision.revision_number}`, "user");
 
   // Restore the snapshotted fields
@@ -148,23 +148,23 @@ router.post("/rollback/:revisionId", (req, res) => {
   }
   if (setClauses.length > 0) {
     values.push(entityId);
-    run(`UPDATE teammate SET ${setClauses.join(", ")} WHERE id = ?`, values);
+    await run(`UPDATE teammate SET ${setClauses.join(", ")} WHERE id = ?`, values);
   }
 
-  const updated = queryOne(`SELECT * FROM teammate WHERE id = ?`, [entityId]);
+  const updated = await queryOne(`SELECT * FROM teammate WHERE id = ?`, [entityId]);
   res.json({ status: "rolled_back", revision_number: revision.revision_number, teammate: updated });
 });
 
 /** PUT /api/teammate/workflow-config - store workflow step configuration */
-router.put("/workflow-config", (req, res) => {
+router.put("/workflow-config", async (req, res) => {
   const { org_id, workflow_id, config } = req.body;
   if (!org_id || !workflow_id || !config) { res.status(400).json({ error: "org_id, workflow_id, and config required" }); return; }
 
-  const teammate = queryOne(`SELECT id FROM teammate WHERE org_id = ?`, [org_id]);
+  const teammate = await queryOne(`SELECT id FROM teammate WHERE org_id = ?`, [org_id]);
   if (!teammate) { res.status(404).json({ error: "No teammate configured" }); return; }
 
   // Store in context_overrides with scope_type='sequence' (closest valid type) and scope_id=workflow_id
-  const existing = queryOne(
+  const existing = await queryOne(
     `SELECT id FROM context_overrides WHERE org_id = ? AND scope_type = 'sequence' AND scope_id = ?`,
     [org_id, workflow_id]
   );
@@ -172,10 +172,10 @@ router.put("/workflow-config", (req, res) => {
   const configJson = typeof config === "string" ? config : JSON.stringify(config);
 
   if (existing) {
-    run(`UPDATE context_overrides SET instruction_additions = ? WHERE id = ?`, [configJson, existing.id]);
+    await run(`UPDATE context_overrides SET instruction_additions = ? WHERE id = ?`, [configJson, existing.id]);
   } else {
     const id = uuid();
-    run(
+    await run(
       `INSERT INTO context_overrides (id, org_id, scope_type, scope_id, instruction_additions) VALUES (?, ?, ?, ?, ?)`,
       [id, org_id, "sequence", workflow_id, configJson]
     );
@@ -185,19 +185,19 @@ router.put("/workflow-config", (req, res) => {
 });
 
 /** GET /api/teammate/workflow-config?org_id=xxx&workflow_id=yyy */
-router.get("/workflow-config", (req, res) => {
+router.get("/workflow-config", async (req, res) => {
   const orgId = req.query.org_id as string;
   const workflowId = req.query.workflow_id as string;
   if (!orgId) { res.status(400).json({ error: "org_id required" }); return; }
 
   if (workflowId) {
-    const override = queryOne(
+    const override = await queryOne(
       `SELECT * FROM context_overrides WHERE org_id = ? AND scope_type = 'sequence' AND scope_id = ?`,
       [orgId, workflowId]
     );
     res.json(override ? { workflow_id: workflowId, config: JSON.parse((override.instruction_additions as string) || "{}") } : { workflow_id: workflowId, config: {} });
   } else {
-    const overrides = queryAll(
+    const overrides = await queryAll(
       `SELECT * FROM context_overrides WHERE org_id = ? AND scope_type = 'sequence'`, [orgId]
     );
     res.json(overrides.map((o: any) => ({ workflow_id: o.scope_id, config: JSON.parse(o.instruction_additions || "{}") })));
@@ -212,7 +212,7 @@ router.post("/chat", async (req, res) => {
     return;
   }
 
-  const teammate = queryOne(`SELECT * FROM teammate WHERE org_id = ?`, [org_id]);
+  const teammate = await queryOne(`SELECT * FROM teammate WHERE org_id = ?`, [org_id]);
   if (!teammate) {
     res.status(404).json({ error: "No teammate configured" });
     return;
@@ -258,7 +258,7 @@ Keep it conversational. No bullet points or markdown.`,
     const updated = currentInstructions
       ? currentInstructions + "\n" + instructionLines.join("\n")
       : instructionLines.join("\n");
-    run(`UPDATE teammate SET operating_instructions = ? WHERE id = ?`, [updated, teammate.id]);
+    await run(`UPDATE teammate SET operating_instructions = ? WHERE id = ?`, [updated, teammate.id]);
   }
 
   // Clean response (remove INSTRUCTION: lines from what user sees)

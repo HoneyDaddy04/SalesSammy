@@ -37,7 +37,7 @@ const researchers: Record<ResearchStep, Researcher> = {
       ? ((_target.metadata.subject as string) || _target.name)
       : _target.company || _target.name;
 
-    const results = searchKnowledge(orgId, query);
+    const results = await searchKnowledge(orgId, query);
     return results.length > 0
       ? `Relevant knowledge:\n${results.join("\n")}`
       : "No relevant knowledge base articles found.";

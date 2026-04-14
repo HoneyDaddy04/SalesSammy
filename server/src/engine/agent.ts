@@ -20,7 +20,7 @@ export async function runAgent(
   message: InboundMessage
 ): Promise<{ response: string; conversationId: string }> {
   // 1. Load agent config
-  const agent = queryOne(
+  const agent = await queryOne(
     `SELECT * FROM agents WHERE id = ? AND org_id = ?`,
     [message.agent_id, message.org_id]
   );
@@ -31,14 +31,14 @@ export async function runAgent(
   const brandVoice = JSON.parse(agent.brand_voice as string);
 
   // 2. Find or create conversation
-  let conversation = queryOne(
+  let conversation = await queryOne(
     `SELECT id FROM conversations WHERE agent_id = ? AND customer_id = ? AND status = 'active' ORDER BY updated_at DESC LIMIT 1`,
     [message.agent_id, message.customer_id]
   );
 
   if (!conversation) {
     const convId = uuid();
-    run(
+    await run(
       `INSERT INTO conversations (id, org_id, agent_id, channel, customer_id) VALUES (?, ?, ?, ?, ?)`,
       [convId, message.org_id, message.agent_id, message.channel, message.customer_id]
     );
@@ -48,20 +48,20 @@ export async function runAgent(
   const conversationId = conversation.id as string;
 
   // 3. Save the user's message
-  run(
+  await run(
     `INSERT INTO messages (id, conversation_id, role, content) VALUES (?, ?, 'user', ?)`,
     [uuid(), conversationId, message.content]
   );
 
   // 4. Build context: memory + knowledge
-  const memoryContext = buildMemoryContext(
+  const memoryContext = await buildMemoryContext(
     message.org_id,
     message.customer_id,
     message.content
   );
 
   // 5. Load conversation history
-  const history = getConversationHistory(conversationId);
+  const history = await getConversationHistory(conversationId);
   const messages: Anthropic.MessageParam[] = history.map((m) => ({
     role: m.role as "user" | "assistant",
     content: m.content,
@@ -138,26 +138,26 @@ export async function runAgent(
   const finalResponse = textBlocks.map((b) => b.text).join("\n");
 
   // 9. Save assistant message
-  run(
+  await run(
     `INSERT INTO messages (id, conversation_id, role, content) VALUES (?, ?, 'assistant', ?)`,
     [uuid(), conversationId, finalResponse]
   );
 
   // 10. Update conversation timestamp
-  run(`UPDATE conversations SET updated_at = datetime('now') WHERE id = ?`, [conversationId]);
+  await run(`UPDATE conversations SET updated_at = NOW() WHERE id = ?`, [conversationId]);
 
   // 11. Extract and save customer memory
-  extractAndSaveMemory(message.org_id, message.customer_id, message.content, conversationId);
+  await extractAndSaveMemory(message.org_id, message.customer_id, message.content, conversationId);
 
   return { response: finalResponse, conversationId };
 }
 
-function extractAndSaveMemory(
+async function extractAndSaveMemory(
   orgId: string,
   customerId: string,
   userMessage: string,
   conversationId: string
-): void {
+): Promise<void> {
   const patterns = [
     /my name is (.+)/i,
     /i(?:'m| am) (?:the |a )?(.+?) (?:at|of|for)/i,
@@ -169,7 +169,7 @@ function extractAndSaveMemory(
   for (const pattern of patterns) {
     const match = userMessage.match(pattern);
     if (match) {
-      saveCustomerMemory(orgId, customerId, match[0], conversationId);
+      await saveCustomerMemory(orgId, customerId, match[0], conversationId);
     }
   }
 }

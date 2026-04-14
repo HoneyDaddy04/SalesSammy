@@ -4,19 +4,19 @@ import { v4 as uuid } from "uuid";
 export type GateType = "config_change" | "budget_breach" | "autonomy_transition" | "sequence_change" | "escalation_rule";
 
 /** Create a pending approval gate. Returns gate id. */
-export function createGate(
+export async function createGate(
   orgId: string,
   gateType: GateType,
   entityId: string | null,
   oldValue: object,
   newValue: object
-): string {
+): Promise<string> {
   const id = uuid();
-  run(
+  await run(
     `INSERT INTO approval_gates (id, org_id, gate_type, entity_id, old_value, new_value) VALUES (?, ?, ?, ?, ?, ?)`,
     [id, orgId, gateType, entityId, JSON.stringify(oldValue), JSON.stringify(newValue)]
   );
-  run(
+  await run(
     `INSERT INTO activity_log (id, org_id, action, detail, status) VALUES (?, ?, ?, ?, 'pending')`,
     [uuid(), orgId, `Approval required: ${gateType.replace(/_/g, " ")}`, `Pending review`]
   );
@@ -24,17 +24,17 @@ export function createGate(
 }
 
 /** Resolve a gate. Returns the new_value if approved. */
-export function resolveGate(gateId: string, approved: boolean, resolvedBy: string): { gate: any; newValue: object } {
-  const gate = queryOne(`SELECT * FROM approval_gates WHERE id = ?`, [gateId]);
+export async function resolveGate(gateId: string, approved: boolean, resolvedBy: string): Promise<{ gate: any; newValue: object }> {
+  const gate = await queryOne(`SELECT * FROM approval_gates WHERE id = ?`, [gateId]);
   if (!gate) throw new Error("Approval gate not found");
   if (gate.status !== "pending") throw new Error(`Gate already resolved: ${gate.status}`);
 
-  run(
-    `UPDATE approval_gates SET status = ?, resolved_at = datetime('now'), resolved_by = ? WHERE id = ?`,
+  await run(
+    `UPDATE approval_gates SET status = ?, resolved_at = NOW(), resolved_by = ? WHERE id = ?`,
     [approved ? "approved" : "rejected", resolvedBy, gateId]
   );
 
-  run(
+  await run(
     `INSERT INTO activity_log (id, org_id, action, detail, status) VALUES (?, ?, ?, ?, ?)`,
     [uuid(), gate.org_id, `Approval ${approved ? "granted" : "denied"}: ${gate.gate_type}`, `Resolved by ${resolvedBy}`, approved ? "success" : "warning"]
   );
@@ -43,8 +43,8 @@ export function resolveGate(gateId: string, approved: boolean, resolvedBy: strin
 }
 
 /** Get pending gates for an org. */
-export function getPendingGates(orgId: string) {
-  return queryAll(
+export async function getPendingGates(orgId: string) {
+  return await queryAll(
     `SELECT * FROM approval_gates WHERE org_id = ? AND status = 'pending' ORDER BY requested_at DESC`,
     [orgId]
   );

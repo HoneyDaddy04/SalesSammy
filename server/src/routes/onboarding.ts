@@ -62,8 +62,8 @@ router.post("/start", async (req, res) => {
   const orgId = uuid();
   const sessionId = uuid();
 
-  run(`INSERT INTO organizations (id, name) VALUES (?, ?)`, [orgId, company_name]);
-  run(
+  await run(`INSERT INTO organizations (id, name) VALUES (?, ?)`, [orgId, company_name]);
+  await run(
     `INSERT INTO onboarding_sessions (id, org_id, current_question, answers) VALUES (?, ?, 0, ?)`,
     [sessionId, orgId, JSON.stringify({ user_name, user_email, company_name })]
   );
@@ -85,7 +85,7 @@ router.post("/answer", async (req, res) => {
     return;
   }
 
-  const session = queryOne(
+  const session = await queryOne(
     `SELECT * FROM onboarding_sessions WHERE id = ?`,
     [session_id]
   );
@@ -103,7 +103,7 @@ router.post("/answer", async (req, res) => {
 
   if (nextQ < QUESTIONS.length) {
     // More questions to go
-    run(
+    await run(
       `UPDATE onboarding_sessions SET current_question = ?, answers = ? WHERE id = ?`,
       [nextQ, JSON.stringify(answers), session_id]
     );
@@ -119,7 +119,7 @@ router.post("/answer", async (req, res) => {
     });
   } else {
     // All questions answered - generate persona and create teammate
-    run(
+    await run(
       `UPDATE onboarding_sessions SET current_question = ?, answers = ?, status = 'complete' WHERE id = ?`,
       [nextQ, JSON.stringify(answers), session_id]
     );
@@ -147,7 +147,7 @@ router.post("/feedback", async (req, res) => {
     return;
   }
 
-  const teammate = queryOne(`SELECT * FROM teammate WHERE org_id = ?`, [org_id]);
+  const teammate = await queryOne(`SELECT * FROM teammate WHERE org_id = ?`, [org_id]);
   if (!teammate) {
     res.status(404).json({ error: "Teammate not found" });
     return;
@@ -157,7 +157,7 @@ router.post("/feedback", async (req, res) => {
   let instructions = teammate.operating_instructions as string || "";
   if (feedback && feedback.trim()) {
     instructions += (instructions ? "\n" : "") + `User feedback on first draft: ${feedback}`;
-    run(`UPDATE teammate SET operating_instructions = ? WHERE id = ?`, [instructions, teammate.id]);
+    await run(`UPDATE teammate SET operating_instructions = ? WHERE id = ?`, [instructions, teammate.id]);
   }
 
   res.json({ status: "ok", message: "Got it - I'll adjust based on your feedback. Ready to get to work." });
@@ -231,7 +231,7 @@ Escalation: ${answers.escalation || "none"}`,
 
   // Create teammate
   const teammateId = uuid();
-  run(
+  await run(
     `INSERT INTO teammate (id, org_id, business_description, target_audience, lead_trigger_signals, lead_source_type, goal, voice_examples, guardrails, escalation_contact, persona_prompt, primary_channel, secondary_channel) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       teammateId, orgId,

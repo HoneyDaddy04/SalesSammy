@@ -1,60 +1,45 @@
-import initSqlJs, { Database as SqlJsDatabase } from "sql.js";
-import path from "path";
-import fs from "fs";
+import pg from "pg";
 import { config } from "../config/env.js";
 
-let db: SqlJsDatabase;
+const { Pool } = pg;
 
-export async function getDb(): Promise<SqlJsDatabase> {
-  if (db) return db;
+let pool: pg.Pool;
 
-  const SQL = await initSqlJs();
-  const dbDir = path.dirname(config.databasePath);
-  if (!fs.existsSync(dbDir)) {
-    fs.mkdirSync(dbDir, { recursive: true });
-  }
+export async function getDb(): Promise<pg.Pool> {
+  if (pool) return pool;
 
-  if (fs.existsSync(config.databasePath)) {
-    const buffer = fs.readFileSync(config.databasePath);
-    db = new SQL.Database(buffer);
-  } else {
-    db = new SQL.Database();
-  }
+  pool = new Pool({
+    connectionString: config.databaseUrl,
+    ssl: { rejectUnauthorized: false },
+  });
 
-  db.run("PRAGMA foreign_keys = ON");
-  return db;
+  const client = await pool.connect();
+  console.log("Connected to Postgres (Supabase)");
+  client.release();
+
+  return pool;
 }
 
-export function saveDb(): void {
-  if (!db) return;
-  const data = db.export();
-  const buffer = Buffer.from(data);
-  fs.writeFileSync(config.databasePath, buffer);
+// Convert ? placeholders to $1, $2, etc.
+function pgParams(sql: string): string {
+  let i = 0;
+  return sql.replace(/\?/g, () => `$${++i}`);
 }
 
-// Helper: run a SELECT and return rows as objects
-export function queryAll(sql: string, params: unknown[] = []): Record<string, unknown>[] {
-  const stmt = db.prepare(sql);
-  stmt.bind(params as any[]);
-  const results: Record<string, unknown>[] = [];
-  while (stmt.step()) {
-    results.push(stmt.getAsObject());
-  }
-  stmt.free();
-  return results;
+export async function queryAll(sql: string, params: unknown[] = []): Promise<Record<string, unknown>[]> {
+  const result = await pool.query(pgParams(sql), params);
+  return result.rows;
 }
 
-export function queryOne(sql: string, params: unknown[] = []): Record<string, unknown> | undefined {
-  const results = queryAll(sql, params);
-  return results[0];
+export async function queryOne(sql: string, params: unknown[] = []): Promise<Record<string, unknown> | undefined> {
+  const rows = await queryAll(sql, params);
+  return rows[0];
 }
 
-export function run(sql: string, params: unknown[] = []): void {
-  db.run(sql, params as any[]);
-  saveDb();
+export async function run(sql: string, params: unknown[] = []): Promise<void> {
+  await pool.query(pgParams(sql), params);
 }
 
-export function exec(sql: string): void {
-  db.exec(sql);
-  saveDb();
+export async function exec(sql: string): Promise<void> {
+  await pool.query(sql);
 }

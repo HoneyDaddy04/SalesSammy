@@ -1,12 +1,12 @@
 import { queryAll, queryOne } from "../db/database.js";
 
 // Tool: Get all previous messages sent to and received from this contact
-export function getContactHistory(contactId: string): { role: string; content: string; channel: string; date: string }[] {
-  const touches = queryAll(
+export async function getContactHistory(contactId: string): Promise<{ role: string; content: string; channel: string; date: string }[]> {
+  const touches = await queryAll(
     `SELECT drafted_content as content, channel, 'sent' as role, sent_at as date FROM touch_queue WHERE contact_id = ? AND status = 'sent' ORDER BY sent_at ASC`,
     [contactId]
   );
-  const replies = queryAll(
+  const replies = await queryAll(
     `SELECT content, channel, 'received' as role, created_at as date FROM reply_events WHERE contact_id = ? ORDER BY created_at ASC`,
     [contactId]
   );
@@ -16,10 +16,10 @@ export function getContactHistory(contactId: string): { role: string; content: s
 }
 
 // Tool: Search knowledge base for relevant info
-export function searchKnowledgeBase(orgId: string, query: string): string[] {
+export async function searchKnowledgeBase(orgId: string, query: string): Promise<string[]> {
   // Simple keyword search (would be vector search in production)
   const keywords = query.toLowerCase().split(/\s+/).filter(w => w.length > 3);
-  const all = queryAll(`SELECT content, source FROM knowledge_chunks WHERE org_id = ?`, [orgId]);
+  const all = await queryAll(`SELECT content, source FROM knowledge_chunks WHERE org_id = ?`, [orgId]);
   return (all as any[])
     .filter(k => keywords.some(kw => (k.content as string).toLowerCase().includes(kw)))
     .map(k => `[${k.source}] ${k.content}`)

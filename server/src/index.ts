@@ -54,8 +54,8 @@ async function start() {
   });
 
   // Returns the first org (demo org) so frontend doesn't need manual config
-  app.get("/api/demo", (_req, res) => {
-    const org = queryOne(`SELECT id, name FROM organizations LIMIT 1`);
+  app.get("/api/demo", async (_req, res) => {
+    const org = await queryOne(`SELECT id, name FROM organizations LIMIT 1`);
     if (!org) { res.status(404).json({ error: "No demo org found" }); return; }
     res.json(org);
   });

@@ -1,5 +1,5 @@
 import { AgentInterface, ResearchContext, DraftResult } from "./interface.js";
-import { getContactHistory, searchKnowledgeBase, searchWeb, checkLinkedIn } from "./tools.js";
+import { getContactHistory, searchKnowledgeBase, searchWeb, checkLinkedIn, pullEmailHistory } from "./tools.js";
 import { getContactMemories, getPatternInsights, saveContactMemory, extractAndStoreMemories } from "./memory.js";
 import { queryOne, queryAll } from "../db/database.js";
 import { mergeContext } from "../services/context-merger.js";
@@ -8,64 +8,308 @@ import { config } from "../config/env.js";
 
 const anthropic = new Anthropic({ apiKey: config.anthropicApiKey });
 
+// ── Tool definitions for Claude tool-calling ──
+// Claude sees these and decides which ones to call during research.
+
+const researchTools: Anthropic.Tool[] = [
+  {
+    name: "get_conversation_history",
+    description: "Get all previous messages sent to and received from this contact across ALL channels (email, WhatsApp, LinkedIn, SMS, etc.). Returns chronological thread with channel info.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        contact_id: { type: "string", description: "The contact's ID" },
+      },
+      required: ["contact_id"],
+    },
+  },
+  {
+    name: "search_knowledge_base",
+    description: "Search the business knowledge base for product info, pricing, FAQs, policies, competitive positioning, or objection handling relevant to a query.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        query: { type: "string", description: "What to search for (e.g. 'pricing for teams', 'migration from Jira', 'free trial details')" },
+      },
+      required: ["query"],
+    },
+  },
+  {
+    name: "search_web",
+    description: "Search the web for recent news, funding announcements, job postings, or other public information about a company or person. Use this to find fresh context for personalization.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        query: { type: "string", description: "What to search for (e.g. 'Acme Corp funding announcement', 'Sarah Chen LinkedIn')" },
+      },
+      required: ["query"],
+    },
+  },
+  {
+    name: "check_linkedin",
+    description: "Check a person's LinkedIn profile for recent posts, job changes, or activity that could be relevant for outreach.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        linkedin_url: { type: "string", description: "The LinkedIn profile URL" },
+      },
+      required: ["linkedin_url"],
+    },
+  },
+  {
+    name: "get_contact_memories",
+    description: "Get everything Sammy remembers about this contact from previous interactions: facts, interests, objections, preferences, and insights.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        contact_id: { type: "string", description: "The contact's ID" },
+      },
+      required: ["contact_id"],
+    },
+  },
+  {
+    name: "get_pattern_insights",
+    description: "Get cross-contact learnings: which angles, channels, and approaches work best for this business's leads.",
+    input_schema: {
+      type: "object" as const,
+      properties: {},
+      required: [],
+    },
+  },
+  {
+    name: "pull_channel_history",
+    description: "Pull previous conversation history from a specific external channel (Gmail threads, WhatsApp messages, etc.) for context from BEFORE the contact entered the system.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        channel: { type: "string", description: "Channel type: email, whatsapp, linkedin, sms, telegram, facebook, instagram" },
+        contact_identifier: { type: "string", description: "Email address, phone number, or profile URL depending on channel" },
+      },
+      required: ["channel", "contact_identifier"],
+    },
+  },
+  {
+    name: "save_memory",
+    description: "Save a new fact, interest, objection, or insight about a contact for future reference. Use this when you learn something important.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        contact_id: { type: "string", description: "The contact's ID" },
+        memory_type: { type: "string", enum: ["fact", "interest", "objection", "preference", "insight"], description: "Type of memory" },
+        content: { type: "string", description: "The memory content" },
+      },
+      required: ["contact_id", "memory_type", "content"],
+    },
+  },
+];
+
+// ── Execute a tool call from Claude ──
+
+async function executeTool(orgId: string, name: string, input: Record<string, string>): Promise<string> {
+  try {
+    switch (name) {
+      case "get_conversation_history": {
+        const history = await getContactHistory(input.contact_id);
+        if (history.length === 0) return "No previous messages with this contact.";
+        return history.map(m => `[${m.role.toUpperCase()} via ${m.channel}, ${m.date || "unknown date"}] ${m.content}`).join("\n\n");
+      }
+      case "search_knowledge_base": {
+        const hits = await searchKnowledgeBase(orgId, input.query);
+        if (hits.length === 0) return "No relevant knowledge base entries found.";
+        return hits.join("\n\n");
+      }
+      case "search_web": {
+        // Stub for now. Returns empty but the tool-calling architecture is real.
+        // Replace with SerpAPI/Brave/Tavily integration.
+        return "Web search not yet connected. No external results available.";
+      }
+      case "check_linkedin": {
+        // Stub. Replace with Proxycurl/PhantomBuster integration.
+        return "LinkedIn lookup not yet connected. No profile data available.";
+      }
+      case "get_contact_memories": {
+        const memories = await getContactMemories(orgId, input.contact_id);
+        if (memories.length === 0) return "No stored memories about this contact yet.";
+        return memories.join("\n");
+      }
+      case "get_pattern_insights": {
+        const insights = await getPatternInsights(orgId);
+        if (insights.length === 0) return "No pattern insights available yet. Keep sending and Sammy will learn.";
+        return insights.join("\n");
+      }
+      case "pull_channel_history": {
+        // Stub. Replace with actual channel API integration.
+        return `Channel history pull for ${input.channel} not yet connected. Use get_conversation_history for messages sent/received through Sammy.`;
+      }
+      case "save_memory": {
+        await saveContactMemory(orgId, input.contact_id, input.memory_type, input.content);
+        return `Memory saved: [${input.memory_type}] ${input.content}`;
+      }
+      default:
+        return `Unknown tool: ${name}`;
+    }
+  } catch (err: any) {
+    return `Tool error: ${err.message}`;
+  }
+}
+
+// ── The Agent ──
+
 export class ClaudeAgent implements AgentInterface {
 
+  /**
+   * Research a contact using Claude-driven tool calling.
+   * Claude decides which tools to call based on what it knows about the contact.
+   */
   async research(orgId: string, contactId: string): Promise<ResearchContext> {
-    const contact = queryOne(`SELECT * FROM contacts WHERE id = ?`, [contactId]);
+    const contact = await queryOne(`SELECT * FROM contacts WHERE id = ?`, [contactId]);
     if (!contact) throw new Error(`Contact ${contactId} not found`);
 
     const metadata = JSON.parse((contact.metadata as string) || "{}");
+    const contactSummary = [
+      `${contact.name}`,
+      contact.role || metadata.role ? `is ${contact.role || metadata.role}` : null,
+      contact.company ? `at ${contact.company}` : null,
+      contact.industry ? `(${contact.industry})` : null,
+      metadata.recent_signal ? `Recent signal: ${metadata.recent_signal}.` : null,
+      metadata.team_size ? `Team size: ${metadata.team_size}.` : null,
+      contact.lead_score ? `Lead score: ${contact.lead_score}.` : null,
+      contact.status ? `Status: ${contact.status}.` : null,
+    ].filter(Boolean).join(" ");
 
-    // Build contact summary
-    const contactSummary = `${contact.name} is ${metadata.role || contact.role || "a contact"} at ${contact.company || "unknown company"}. ${metadata.recent_signal ? `Recent signal: ${metadata.recent_signal}.` : ""} ${metadata.team_size ? `Team size: ${metadata.team_size}.` : ""}`;
+    // Let Claude drive the research via tool calling
+    const messages: Anthropic.MessageParam[] = [{
+      role: "user",
+      content: `You are researching a contact before drafting a sales message. Here's what you know:
 
-    // Get conversation history
-    const previousMessages = getContactHistory(contactId).map(m => ({
-      role: m.role as "sent" | "received",
-      content: m.content,
-      channel: m.channel,
-      date: m.date,
-    }));
+${contactSummary}
 
-    // Search knowledge base with company/role context
-    const searchQuery = [contact.company, contact.role, contact.industry].filter(Boolean).join(" ");
-    const knowledgeBaseHits = searchKnowledgeBase(orgId, searchQuery || "general");
+Contact ID: ${contactId}
+Email: ${contact.email || "unknown"}
+Phone: ${contact.phone || "unknown"}
+LinkedIn: ${contact.linkedin || "unknown"}
+Company: ${contact.company || "unknown"}
 
-    // Web search (stub)
-    const webInsights = await searchWeb((contact.company as string) || "");
+Use the tools available to gather context. At minimum:
+1. Check conversation history (what have we already said to them?)
+2. Check what we remember about them
+3. Search the knowledge base for relevant product info
+4. Check for any pattern insights
 
-    // LinkedIn check (stub)
-    const linkedinInsights = await checkLinkedIn(contact.linkedin as string | null);
-    const allWebInsights = [...webInsights, ...linkedinInsights];
+If they have a LinkedIn URL, check it. If they have a company name, search for recent news.
 
-    // Contact memory
-    const contactMemory = getContactMemories(orgId, contactId);
+After gathering context, respond with a brief research summary.`,
+    }];
 
-    // Pattern insights
-    const patternInsights = getPatternInsights(orgId);
+    // Collect research results
+    const collectedHistory: ResearchContext["previousMessages"] = [];
+    const collectedWeb: string[] = [];
+    const collectedKB: string[] = [];
+    const collectedPatterns: string[] = [];
+    const collectedMemory: string[] = [];
+
+    // Agent loop: Claude calls tools, we execute, feed results back
+    let loopCount = 0;
+    const maxLoops = 5; // Safety limit
+
+    while (loopCount < maxLoops) {
+      loopCount++;
+
+      const response = await anthropic.messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1024,
+        system: "You are Sammy's research engine. Use the available tools to gather context about a contact before a sales message is drafted. Be thorough but efficient. Call tools to get real data, don't guess.",
+        tools: researchTools,
+        messages,
+      });
+
+      // Check if Claude wants to use tools
+      const toolUseBlocks = response.content.filter(b => b.type === "tool_use");
+
+      if (toolUseBlocks.length === 0) {
+        // Claude is done researching, gave us a text summary
+        break;
+      }
+
+      // Execute each tool call
+      const toolResultContent: Anthropic.ToolResultBlockParam[] = [];
+      for (const block of toolUseBlocks) {
+        if (block.type !== "tool_use") continue;
+        const result = await executeTool(orgId, block.name, block.input as Record<string, string>);
+
+        // Collect results into the appropriate buckets
+        switch (block.name) {
+          case "get_conversation_history":
+            (await getContactHistory(contactId)).forEach(m => {
+              collectedHistory.push({
+                role: m.role as "sent" | "received",
+                content: m.content,
+                channel: m.channel,
+                date: m.date,
+              });
+            });
+            break;
+          case "search_knowledge_base":
+            collectedKB.push(result);
+            break;
+          case "search_web":
+          case "check_linkedin":
+          case "pull_channel_history":
+            if (result && !result.includes("not yet connected")) collectedWeb.push(result);
+            break;
+          case "get_contact_memories":
+            collectedMemory.push(...await getContactMemories(orgId, contactId));
+            break;
+          case "get_pattern_insights":
+            collectedPatterns.push(...await getPatternInsights(orgId));
+            break;
+        }
+
+        toolResultContent.push({
+          type: "tool_result" as const,
+          tool_use_id: block.id,
+          content: result,
+        });
+      }
+
+      const toolResults: Anthropic.MessageParam = {
+        role: "user",
+        content: toolResultContent,
+      };
+
+      // Add Claude's response and tool results to messages for next loop
+      messages.push({ role: "assistant", content: response.content });
+      messages.push(toolResults);
+
+      // If Claude signaled stop
+      if (response.stop_reason === "end_turn") break;
+    }
 
     return {
       contactSummary,
-      previousMessages,
-      webInsights: allWebInsights,
-      knowledgeBaseHits,
-      patternInsights,
-      contactMemory,
+      previousMessages: collectedHistory,
+      webInsights: collectedWeb,
+      knowledgeBaseHits: collectedKB,
+      patternInsights: collectedPatterns,
+      contactMemory: collectedMemory,
     };
   }
 
+  /**
+   * Draft a message using the research context.
+   * Single Claude call with rich context (not tool-calling for drafting).
+   */
   async draft(orgId: string, contactId: string, context: ResearchContext, angle: string, channel: string, touchIndex: number): Promise<DraftResult> {
-    const teammate = queryOne(`SELECT * FROM teammate WHERE org_id = ?`, [orgId]);
+    const teammate = await queryOne(`SELECT * FROM teammate WHERE org_id = ?`, [orgId]);
     if (!teammate) throw new Error("No teammate configured");
 
-    const contact = queryOne(`SELECT * FROM contacts WHERE id = ?`, [contactId]);
+    const contact = await queryOne(`SELECT * FROM contacts WHERE id = ?`, [contactId]);
     if (!contact) throw new Error(`Contact ${contactId} not found`);
 
-    // Get sequence info for context merging
     const sequenceId = contact.sequence_id as string | null;
     const contactTags: string[] = (() => { try { return JSON.parse(contact.tags as string); } catch { return []; } })();
 
-    const merged = mergeContext(
+    const merged = await mergeContext(
       orgId,
       teammate.persona_prompt as string,
       (teammate.operating_instructions as string) || "",
@@ -76,28 +320,27 @@ export class ClaudeAgent implements AgentInterface {
     );
 
     const voiceBlock = merged.voiceExamples.length > 0
-      ? `\n\nHere are examples of messages the user has sent that got good responses - match this voice:\n${merged.voiceExamples.map((v: string, i: number) => `${i + 1}. "${v}"`).join("\n")}`
+      ? `\n\nMatch this voice (real messages that worked):\n${merged.voiceExamples.map((v: string, i: number) => `${i + 1}. "${v}"`).join("\n")}`
       : "";
 
-    // Build memory/research block for the system prompt
     const memoryBlock = context.contactMemory.length > 0
-      ? `\n\nWhat you remember about this contact:\n${context.contactMemory.join("\n")}`
+      ? `\n\nWhat you remember about ${contact.name}:\n${context.contactMemory.join("\n")}`
       : "";
 
     const historyBlock = context.previousMessages.length > 0
-      ? `\n\nConversation history:\n${context.previousMessages.map(m => `[${m.role}/${m.channel}] ${m.content}`).join("\n")}`
+      ? `\n\nConversation so far:\n${context.previousMessages.map(m => `[${m.role.toUpperCase()} via ${m.channel}] ${m.content}`).join("\n")}`
       : "";
 
     const knowledgeBlock = context.knowledgeBaseHits.length > 0
-      ? `\n\nRelevant knowledge:\n${context.knowledgeBaseHits.join("\n")}`
+      ? `\n\nProduct knowledge:\n${context.knowledgeBaseHits.join("\n")}`
       : "";
 
     const patternBlock = context.patternInsights.length > 0
-      ? `\n\nLearned patterns:\n${context.patternInsights.join("\n")}`
+      ? `\n\nWhat's working:\n${context.patternInsights.join("\n")}`
       : "";
 
     const webBlock = context.webInsights.length > 0
-      ? `\n\nRecent web insights:\n${context.webInsights.join("\n")}`
+      ? `\n\nFresh intel:\n${context.webInsights.join("\n")}`
       : "";
 
     const researchContext = `${context.contactSummary} Touch ${touchIndex + 1}.${historyBlock}${memoryBlock}${knowledgeBlock}${patternBlock}${webBlock}`;
@@ -105,19 +348,20 @@ export class ClaudeAgent implements AgentInterface {
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
       max_tokens: 200,
-      system: `${merged.persona}${voiceBlock}${merged.instructions ? `\n\nAdditional instructions from user:\n${merged.instructions}` : ""}${memoryBlock}${historyBlock}${knowledgeBlock}${patternBlock}${webBlock}
+      system: `${merged.persona}${voiceBlock}${merged.instructions ? `\n\nOperating instructions:\n${merged.instructions}` : ""}${memoryBlock}${historyBlock}${knowledgeBlock}${patternBlock}${webBlock}
 
 Rules:
 - Write like a real person. Short, warm, direct.
 - No bullet points, no markdown, no formatting.
 - Max 3-4 sentences.
-- Reference something specific about the contact.
+- Reference something SPECIFIC about the contact (a recent event, their role, something they said).
+- NEVER repeat something you already said in a previous message.
 - Match the angle: ${angle.replace(/_/g, " ")}.
-- Channel: ${channel}. Adjust length/tone for this channel.
-- End with a low-pressure question or next step.`,
+- Channel: ${channel}. Adjust tone/length accordingly (WhatsApp = shorter, email = slightly longer).
+- End with a low-pressure question or clear next step.`,
       messages: [{
         role: "user",
-        content: `Draft touch ${touchIndex + 1} for ${contact.name} (${contact.email}).
+        content: `Draft touch ${touchIndex + 1} for ${contact.name} (${contact.email || contact.phone}).
 Angle: ${angle}
 Context: ${context.contactSummary}
 Goal: ${teammate.goal}`,
@@ -126,8 +370,8 @@ Goal: ${teammate.goal}`,
 
     const draftedContent = (response.content[0] as Anthropic.TextBlock).text;
 
-    // Store memory from the drafted interaction
-    extractAndStoreMemories(orgId, contactId, draftedContent, "sent");
+    // Auto-extract and store memories from this interaction
+    await extractAndStoreMemories(orgId, contactId, draftedContent, "sent");
 
     return {
       content: draftedContent,
@@ -136,51 +380,28 @@ Goal: ${teammate.goal}`,
     };
   }
 
+  /**
+   * Classify an inbound reply using Claude tool-calling for ambiguous cases.
+   * Tries rule-based first, falls back to Claude for uncertain messages.
+   */
   async classifyReply(orgId: string, replyContent: string, contactId: string): Promise<{ classification: string; routedAction: string }> {
     const content = replyContent.toLowerCase();
 
-    // Rule-based classification
+    // ── Fast rule-based classification for clear-cut cases ──
     const optOutWords = ["unsubscribe", "stop", "remove me", "opt out", "opt-out"];
     const hostileWords = ["scam", "spam", "fuck off", "f*** off", "fuck you", "report you", "lawsuit", "legal action"];
-    const positiveWords = ["interested", "tell me more", "yes", "sounds good", "let's talk", "lets talk", "book", "demo", "pricing", "sign me up", "love to", "would like"];
-    const objectionWords = ["not now", "too expensive", "already have", "no thanks", "maybe later", "not interested", "no thank you", "pass", "not for us", "budget"];
-    const questionIndicators = ["?", "how", "what", "when", "where", "why", "who", "can you", "could you", "do you", "is there"];
-
-    let classification: string;
-    let routedAction: string;
 
     if (optOutWords.some(w => content.includes(w))) {
-      classification = "negative";
-      routedAction = "opt_out";
-    } else if (hostileWords.some(w => content.includes(w))) {
-      classification = "hostile";
-      routedAction = "escalate";
-    } else if (positiveWords.some(w => content.includes(w))) {
-      classification = "positive";
-      routedAction = "draft_response";
-    } else if (objectionWords.some(w => content.includes(w))) {
-      classification = "objection";
-      routedAction = "draft_response";
-    } else if (questionIndicators.some(w => content.includes(w))) {
-      classification = "question";
-      routedAction = "draft_response";
-    } else {
-      // Memory-enhanced classification: check if contact previously showed interest
-      const memories = getContactMemories(orgId, contactId);
-      const hasPositiveHistory = memories.some(m =>
-        m.includes("[interest]") || m.includes("pricing") || m.includes("demo")
-      );
-      if (hasPositiveHistory) {
-        classification = "positive";
-        routedAction = "draft_response";
-      } else {
-        classification = "question";
-        routedAction = "draft_response";
-      }
+      await extractAndStoreMemories(orgId, contactId, replyContent, "received");
+      return { classification: "negative", routedAction: "opt_out" };
+    }
+    if (hostileWords.some(w => content.includes(w))) {
+      await extractAndStoreMemories(orgId, contactId, replyContent, "received");
+      return { classification: "hostile", routedAction: "escalate" };
     }
 
-    // Guardrail-based escalation check
-    const teammate = queryOne(`SELECT guardrails, escalation_contact FROM teammate WHERE org_id = ?`, [orgId]);
+    // ── Guardrail check (always runs) ──
+    const teammate = await queryOne(`SELECT guardrails, escalation_contact FROM teammate WHERE org_id = ?`, [orgId]);
     if (teammate) {
       const guardrails: string[] = (() => { try { return JSON.parse(teammate.guardrails as string || "[]"); } catch { return []; } })();
       for (const rule of guardrails) {
@@ -188,29 +409,56 @@ Goal: ${teammate.goal}`,
         if (lower.includes("escalate")) {
           const words = lower.replace(/escalate\s*(if\s*)?(they\s*)?(mention\s*)?/i, "").split(/[\s,]+/).filter(w => w.length > 2);
           if (words.some(w => content.includes(w))) {
-            classification = "escalated_guardrail";
-            routedAction = "escalate";
-            const esc = teammate.escalation_contact as string | null;
-            if (esc) {
-              console.log(`[ESCALATION] Notify ${esc} — guardrail "${rule}" matched for contact ${contactId}`);
-            }
-            break;
+            await extractAndStoreMemories(orgId, contactId, replyContent, "received");
+            return { classification: "escalated_guardrail", routedAction: "escalate" };
           }
         }
       }
     }
 
+    // ── For everything else, use Claude with memory context ──
+    const memories = await getContactMemories(orgId, contactId);
+    const history = await getContactHistory(contactId);
+
+    const memoryContext = memories.length > 0
+      ? `\nMemories about this contact:\n${memories.join("\n")}`
+      : "";
+    const historyContext = history.length > 0
+      ? `\nRecent conversation:\n${history.slice(-4).map(m => `[${m.role}] ${m.content}`).join("\n")}`
+      : "";
+
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 50,
+      system: `You are a reply classifier for a sales agent. Classify this reply into exactly one category and action.
+
+Categories: positive, question, objection, negative
+Actions: draft_response (for positive/question/objection), escalate (for things requiring human), opt_out (for unsubscribe requests)
+${memoryContext}${historyContext}
+
+Respond with ONLY two words: the classification and the action, separated by a space. Example: "positive draft_response" or "objection draft_response"`,
+      messages: [{
+        role: "user",
+        content: replyContent,
+      }],
+    });
+
+    const result = (response.content[0] as Anthropic.TextBlock).text.trim().toLowerCase();
+    const parts = result.split(/\s+/);
+    const classification = parts[0] || "question";
+    const routedAction = parts[1] || "draft_response";
+
     // Store memory from the reply
-    extractAndStoreMemories(orgId, contactId, replyContent, "received");
+    await extractAndStoreMemories(orgId, contactId, replyContent, "received");
 
     return { classification, routedAction };
   }
 
   async saveMemory(orgId: string, contactId: string, key: string, value: string): Promise<void> {
-    saveContactMemory(orgId, contactId, key, value);
+    await saveContactMemory(orgId, contactId, key, value);
   }
 
   async getMemory(orgId: string, contactId: string): Promise<string[]> {
-    return getContactMemories(orgId, contactId);
+    return await getContactMemories(orgId, contactId);
   }
 }
