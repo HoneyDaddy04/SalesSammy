@@ -68,7 +68,7 @@ const Index = () => {
           <Menu className="w-5 h-5" />
         </button>
         <img src={logo} alt="Sales Sammy" className="w-7 h-7 rounded-md" />
-        <span className="text-sm font-semibold tracking-tight">Sales Sammy</span>
+        <span className="font-display text-base font-bold tracking-tight">Sales Sammy</span>
       </div>
 
       <Sidebar

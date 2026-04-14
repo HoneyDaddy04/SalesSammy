@@ -31,5 +31,3 @@ server/.env
 # Database files
 *.db
 server/data/
-
-.vercel
