@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { ORG_KEY, API_BASE } from "@/lib/constants";
 import { startOnboarding, answerOnboarding, sendOnboardingFeedback } from "@/services/api";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/branding/mark-emerald.svg";
 
 const steps = [
   { id: "signup", label: "Sign Up", num: "01" },
@@ -110,8 +110,8 @@ const Onboarding = () => {
       {/* Step progress sidebar */}
       <div className="hidden lg:flex w-72 border-r border-border bg-sidebar flex-col p-6">
         <div className="flex items-center gap-3 mb-8">
-          <img src={logo} alt="Vaigence" className="w-8 h-8" />
-          <h1 className="font-display text-lg font-bold text-foreground">Vaigence</h1>
+          <img src={logo} alt="Sales Sammy" className="w-8 h-8 rounded-md" />
+          <h1 className="font-display text-lg font-bold text-foreground">Sales Sammy</h1>
         </div>
         <div className="flex-1 space-y-1">
           {steps.map((s, i) => (

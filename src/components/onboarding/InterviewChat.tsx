@@ -5,7 +5,7 @@ import { Send, Bot, User, Loader2 } from "lucide-react";
 import { startOnboarding, answerOnboarding, sendOnboardingFeedback } from "@/services/api";
 import { cn } from "@/lib/utils";
 import { ORG_KEY } from "@/lib/constants";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/branding/mark-emerald.svg";
 
 interface Message {
   id: string;
@@ -101,7 +101,7 @@ const InterviewChat = () => {
           className="w-full max-w-md space-y-6"
         >
           <div className="text-center">
-            <img src={logo} alt="Vaigence" className="w-12 h-12 mx-auto mb-4" />
+            <img src={logo} alt="Sales Sammy" className="w-12 h-12 rounded-lg mx-auto mb-4" />
             <h1 className="font-display text-2xl font-bold text-foreground">Hire Sales Sammy</h1>
             <p className="text-sm text-muted-foreground mt-2">
               Quick interview to learn your business. Takes about 15 minutes.
@@ -151,7 +151,7 @@ const InterviewChat = () => {
       {/* Header */}
       <div className="border-b border-border bg-card px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <img src={logo} alt="Vaigence" className="w-8 h-8" />
+          <img src={logo} alt="Sales Sammy" className="w-8 h-8 rounded-md" />
           <div>
             <h1 className="font-display text-sm font-bold text-foreground">Sammy Interview</h1>
             <p className="text-[10px] text-muted-foreground">

@@ -8,7 +8,7 @@ import {
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/branding/mark-emerald.svg";
 import teammateAvatar from "@/assets/agent-sales.jpg";
 
 const fadeUp = {
@@ -48,8 +48,8 @@ const Landing = () => {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between h-16">
           <div className="flex items-center gap-2.5">
-            <img src={logo} alt="Vaigence" className="w-8 h-8" />
-            <span className="font-display text-xl font-bold tracking-tight">Vaigence</span>
+            <img src={logo} alt="Sales Sammy" className="w-8 h-8 rounded-md" />
+            <span className="font-display text-xl font-bold tracking-tight">Sales Sammy</span>
           </div>
           <div className="hidden md:flex items-center gap-8">
             {navLinks.map((link) => (
@@ -425,10 +425,10 @@ const Landing = () => {
       <footer className="py-12 px-6 border-t border-border">
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <img src={logo} alt="Vaigence" className="w-6 h-6" />
-            <span className="font-display text-sm font-bold">Vaigence</span>
+            <img src={logo} alt="Sales Sammy" className="w-6 h-6 rounded" />
+            <span className="font-display text-sm font-bold">Sales Sammy</span>
           </div>
-          <p className="text-xs text-muted-foreground">&copy; {new Date().getFullYear()} Vaigence. All rights reserved.</p>
+          <p className="text-xs text-muted-foreground">&copy; {new Date().getFullYear()} Sales Sammy. All rights reserved.</p>
         </div>
       </footer>
     </div>

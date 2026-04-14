@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Sidebar from "@/components/dashboard/Sidebar";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/branding/mark-emerald.svg";
 import OverviewView from "@/components/dashboard/OverviewView";
 import MessagesView from "@/components/dashboard/MessagesView";
 import ThreadsView from "@/components/dashboard/ThreadsView";
@@ -67,8 +67,8 @@ const Index = () => {
         >
           <Menu className="w-5 h-5" />
         </button>
-        <img src={logo} alt="Vaigence" className="w-7 h-7" />
-        <span className="font-display text-base font-bold tracking-tight">Vaigence</span>
+        <img src={logo} alt="Sales Sammy" className="w-7 h-7 rounded-md" />
+        <span className="font-display text-base font-bold tracking-tight">Sales Sammy</span>
       </div>
 
       <Sidebar

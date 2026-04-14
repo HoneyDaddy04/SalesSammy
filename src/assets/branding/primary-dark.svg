@@ -1,0 +1,11 @@
+<svg viewBox="0 0 340 80" xmlns="http://www.w3.org/2000/svg">
+  <rect width="340" height="80" rx="12" fill="#0f172a"/>
+  <!-- Mark -->
+  <g transform="translate(16, 8) scale(0.533)">
+    <polygon points="22,20 60,80 98,20 88,20 60,62 32,20" fill="none" stroke="#e5e7eb" stroke-width="3" stroke-linejoin="round"/>
+    <circle cx="60" cy="80" r="8" fill="#10b981" opacity="0.2"/>
+    <circle cx="60" cy="80" r="4.5" fill="#10b981"/>
+  </g>
+  <!-- Wordmark -->
+  <text x="84" y="51" font-family="'Inter', -apple-system, BlinkMacSystemFont, sans-serif" font-size="32" font-weight="500" letter-spacing="-0.03em" fill="#f1f5f9">vaigence</text>
+</svg>

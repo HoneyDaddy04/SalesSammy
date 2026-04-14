@@ -6,7 +6,7 @@ import { ORG_KEY, API_BASE } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/branding/mark-emerald.svg";
 
 
 const Login = () => {
@@ -45,8 +45,8 @@ const Login = () => {
     <div className="min-h-screen bg-background flex">
       <div className="hidden lg:flex w-1/2 bg-primary text-primary-foreground flex-col justify-between p-12">
         <div className="flex items-center gap-3">
-          <img src={logo} alt="Vaigence" className="w-10 h-10 brightness-0 invert" />
-          <span className="font-display text-2xl font-bold">Vaigence</span>
+          <img src={logo} alt="Sales Sammy" className="w-10 h-10 rounded-md brightness-0 invert" />
+          <span className="font-display text-2xl font-bold">Sales Sammy</span>
         </div>
         <div>
           <h1 className="font-display text-4xl font-bold leading-tight mb-4">
@@ -73,12 +73,12 @@ const Login = () => {
       <div className="flex-1 flex items-center justify-center p-6 md:p-12">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="w-full max-w-sm">
           <div className="lg:hidden flex items-center gap-2.5 mb-10">
-            <img src={logo} alt="Vaigence" className="w-8 h-8" />
-            <span className="font-display text-xl font-bold">Vaigence</span>
+            <img src={logo} alt="Sales Sammy" className="w-8 h-8 rounded-md" />
+            <span className="font-display text-xl font-bold">Sales Sammy</span>
           </div>
 
           <h2 className="font-display text-3xl font-bold mb-2">Welcome back</h2>
-          <p className="text-muted-foreground mb-8">Log in to your Vaigence dashboard</p>
+          <p className="text-muted-foreground mb-8">Log in to your Sales Sammy dashboard</p>
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div>

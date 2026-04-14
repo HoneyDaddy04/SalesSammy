@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { LayoutDashboard, Mail, Users, User, Workflow, Link2, Radio, Settings, LogOut, Home, BookOpen, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/branding/mark-emerald.svg";
 import teammateAvatar from "@/assets/agent-sales.jpg";
 
 interface SidebarProps {
@@ -75,10 +75,10 @@ const Sidebar = ({ activeView, pendingMessages = 0, mobileOpen = false, onMobile
         {/* Logo + collapse toggle */}
         <div className={cn("flex items-center border-b border-border", collapsed ? "justify-center px-2 py-3" : "justify-between px-4 py-3")}>
           <div className={cn("flex items-center gap-2.5", collapsed && "hidden")}>
-            <img src={logo} alt="Vaigence" className="w-7 h-7" />
-            <span className="font-display text-base font-bold text-foreground tracking-tight">Vaigence</span>
+            <img src={logo} alt="Sales Sammy" className="w-7 h-7 rounded-md" />
+            <span className="font-display text-base font-bold text-foreground tracking-tight">Sales Sammy</span>
           </div>
-          {collapsed && <img src={logo} alt="Vaigence" className="w-7 h-7" />}
+          {collapsed && <img src={logo} alt="Sales Sammy" className="w-7 h-7 rounded-md" />}
           <button
             onClick={onToggleCollapse}
             className="hidden lg:flex w-7 h-7 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
