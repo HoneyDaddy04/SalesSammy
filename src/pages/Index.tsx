@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Sidebar from "@/components/dashboard/Sidebar";
-import logo from "@/assets/branding/mark-emerald.svg";
+import logo from "@/assets/branding/mark-dark.svg";
 import OverviewView from "@/components/dashboard/OverviewView";
 import MessagesView from "@/components/dashboard/MessagesView";
 import ThreadsView from "@/components/dashboard/ThreadsView";

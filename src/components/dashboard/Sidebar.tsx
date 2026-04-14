@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { LayoutDashboard, Mail, Users, User, Workflow, Link2, Radio, Settings, LogOut, Home, BookOpen, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
-import logo from "@/assets/branding/mark-emerald.svg";
+import logo from "@/assets/branding/mark-dark.svg";
 import teammateAvatar from "@/assets/agent-sales.jpg";
 
 interface SidebarProps {

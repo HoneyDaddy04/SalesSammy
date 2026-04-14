@@ -5,7 +5,7 @@ import { Send, Bot, User, Loader2 } from "lucide-react";
 import { startOnboarding, answerOnboarding, sendOnboardingFeedback } from "@/services/api";
 import { cn } from "@/lib/utils";
 import { ORG_KEY } from "@/lib/constants";
-import logo from "@/assets/branding/mark-emerald.svg";
+import logo from "@/assets/branding/mark-dark.svg";
 
 interface Message {
   id: string;

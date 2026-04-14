@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { ORG_KEY, API_BASE } from "@/lib/constants";
 import { startOnboarding, answerOnboarding, sendOnboardingFeedback } from "@/services/api";
-import logo from "@/assets/branding/mark-emerald.svg";
+import logo from "@/assets/branding/mark-dark.svg";
 
 const steps = [
   { id: "signup", label: "Sign Up", num: "01" },

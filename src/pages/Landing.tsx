@@ -8,7 +8,7 @@ import {
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import logo from "@/assets/branding/mark-emerald.svg";
+import logo from "@/assets/branding/mark-dark.svg";
 import teammateAvatar from "@/assets/agent-sales.jpg";
 
 const fadeUp = {
