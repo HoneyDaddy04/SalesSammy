@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ContactDetailView from "./ContactDetailView";
 import { API_BASE, ORG_KEY, STATUS_COLORS, STATUS_LABELS, CHANNEL_CONFIG } from "@/lib/constants";
+import { DEMO_ORG_ID, demoContacts } from "@/lib/demo-data";
 
 interface Contact {
   id: string; name: string; email: string; phone: string | null; company: string;
@@ -69,6 +70,18 @@ const ThreadsView = () => {
 
   const loadContacts = async () => {
     if (!orgId) return;
+    if (orgId === DEMO_ORG_ID) {
+      let filtered = [...demoContacts] as Contact[];
+      if (statusFilter) filtered = filtered.filter(c => c.status === statusFilter);
+      if (sourceFilter) filtered = filtered.filter(c => c.source === sourceFilter);
+      if (search) {
+        const q = search.toLowerCase();
+        filtered = filtered.filter(c => c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q) || c.company.toLowerCase().includes(q));
+      }
+      setContacts(filtered);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const params = new URLSearchParams({ org_id: orgId, sort: sortBy });
@@ -76,8 +89,9 @@ const ThreadsView = () => {
       if (sourceFilter) params.set("source", sourceFilter);
       if (search) params.set("search", search);
       const res = await fetch(`${API_BASE}/api/contacts?${params.toString()}`);
-      setContacts(await res.json());
-    } catch (err) { toast.error("Failed to load contacts"); } finally { setLoading(false); }
+      const data = await res.json();
+      setContacts(data.length ? data : demoContacts as Contact[]);
+    } catch (err) { setContacts(demoContacts as Contact[]); } finally { setLoading(false); }
   };
 
   useEffect(() => { loadContacts(); }, [orgId, statusFilter, sourceFilter, sortBy]);

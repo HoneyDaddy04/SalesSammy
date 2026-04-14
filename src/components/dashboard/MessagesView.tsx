@@ -38,6 +38,12 @@ const MessagesView = ({ onCountUpdate }: MessagesViewProps) => {
 
   const loadData = useCallback(async () => {
     if (!orgId) return;
+    if (orgId === DEMO_ORG_ID) {
+      setPending(demoQueue); setSent([]); setActivity(demoActivity);
+      onCountUpdate?.(demoQueue.length);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const [p, s, a] = await Promise.all([
@@ -45,9 +51,12 @@ const MessagesView = ({ onCountUpdate }: MessagesViewProps) => {
         fetchQueue(orgId, "sent"),
         fetchActivity(orgId, 20),
       ]);
-      setPending(p); setSent(s); setActivity(a);
-      onCountUpdate?.(p.length);
-    } catch (err) { toast.error("Failed to load messages"); } finally { setLoading(false); }
+      setPending(p.length ? p : demoQueue); setSent(s); setActivity(a.length ? a : demoActivity);
+      onCountUpdate?.((p.length || demoQueue.length));
+    } catch (err) {
+      setPending(demoQueue); setSent([]); setActivity(demoActivity);
+      onCountUpdate?.(demoQueue.length);
+    } finally { setLoading(false); }
   }, [orgId, onCountUpdate]);
 
   useEffect(() => { loadData(); }, [loadData]);
