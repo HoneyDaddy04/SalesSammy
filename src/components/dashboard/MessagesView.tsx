@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Send, Clock, CheckCircle2, Info, Loader2, RefreshCw, Play,
   ChevronDown, ChevronUp, Edit3, Check, X, AlertTriangle,
-  Mail, MessageSquare, ArrowUpRight,
+  Mail, MessageSquare, ArrowUpRight, User, Building2, Linkedin, Phone,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -18,6 +18,25 @@ import { DEMO_ORG_ID, demoQueue, demoActivity } from "@/lib/demo-data";
 
 const statusIcons = ACTIVITY_STATUS_ICONS;
 const statusColors = ACTIVITY_STATUS_COLORS;
+
+const channelIcon: Record<string, typeof Mail> = {
+  email: Mail,
+  whatsapp: MessageSquare,
+  linkedin: Linkedin,
+  sms: Phone,
+};
+const channelLabel: Record<string, string> = {
+  email: "Email",
+  whatsapp: "WhatsApp",
+  linkedin: "LinkedIn DM",
+  sms: "SMS",
+};
+const channelColor: Record<string, string> = {
+  email: "bg-blue-500/10 text-blue-600",
+  whatsapp: "bg-green-500/10 text-green-600",
+  linkedin: "bg-sky-500/10 text-sky-600",
+  sms: "bg-purple-500/10 text-purple-600",
+};
 
 interface MessagesViewProps {
   onCountUpdate?: (count: number) => void;
@@ -85,88 +104,147 @@ const MessagesView = ({ onCountUpdate }: MessagesViewProps) => {
     { id: "activity" as const, label: "Activity", count: activity.length },
   ];
 
+  const getAngleLabel = (angle: string, touchIndex: number) => {
+    if (angle === "first_touch") return "Initial Outreach";
+    if (angle.startsWith("follow_up")) return `Follow-up #${touchIndex}`;
+    return angle.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
+  };
+
   const renderQueueItem = (item: QueueItem) => {
     const isExpanded = expandedId === item.id;
     const isEditing = editingId === item.id;
     const isLoading = actionLoading === item.id;
     const isPending = item.status === "pending_approval";
+    const ChannelIcon = channelIcon[item.channel] || Mail;
+    const chColor = channelColor[item.channel] || "bg-muted text-muted-foreground";
+    const chLabel = channelLabel[item.channel] || item.channel;
 
     return (
       <motion.div key={item.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -20 }}
         className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+
+        {/* Header bar — always visible */}
         <button onClick={() => setExpandedId(isExpanded ? null : item.id)}
-          className="w-full text-left px-5 py-4 flex items-center gap-4 hover:bg-secondary/30 transition-colors">
-          <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
-            isPending ? "bg-primary/10" : "bg-success/10")}>
-            {isPending ? <Clock className="w-4 h-4 text-primary" /> : <CheckCircle2 className="w-4 h-4 text-success" />}
+          className="w-full text-left px-5 py-4 flex items-start gap-4 hover:bg-secondary/30 transition-colors">
+
+          {/* Channel badge */}
+          <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5", chColor)}>
+            <ChannelIcon className="w-4 h-4" />
           </div>
+
+          {/* Recipient + context */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-sm font-semibold text-foreground">{item.contact_name}</span>
-              <span className="text-[10px] text-muted-foreground">at {item.contact_company}</span>
+              <span className="text-xs text-muted-foreground">·</span>
+              <span className="text-xs text-muted-foreground">{item.contact_company}</span>
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Touch {item.touch_index + 1} · {item.angle.replace(/_/g, " ")} · {item.channel} · {item.sequence_name}
-            </p>
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded-full", chColor)}>{chLabel}</span>
+              <span className="text-[10px] text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">
+                {getAngleLabel(item.angle, item.touch_index)}
+              </span>
+              <span className="text-[10px] text-muted-foreground">{item.sequence_name.replace(/_/g, " ")}</span>
+            </div>
+            {/* Message preview — first line only */}
+            {!isExpanded && (
+              <p className="text-xs text-muted-foreground mt-2 truncate">{item.drafted_content.split("\n")[0]}</p>
+            )}
           </div>
+
+          {/* Actions + chevron */}
           <div className="flex items-center gap-2 shrink-0">
             {isPending && !isExpanded && (
               <>
-                <button onClick={(e) => { e.stopPropagation(); handleApprove(item.id); }} disabled={isLoading}
+                <button onClick={(e) => { e.stopPropagation(); handleApprove(item.id); }} disabled={isLoading} title="Approve"
                   className="w-8 h-8 rounded-lg bg-success/10 text-success hover:bg-success/20 flex items-center justify-center">
                   {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                 </button>
-                <button onClick={(e) => { e.stopPropagation(); handleReject(item.id); }} disabled={isLoading}
+                <button onClick={(e) => { e.stopPropagation(); handleReject(item.id); }} disabled={isLoading} title="Skip"
                   className="w-8 h-8 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 flex items-center justify-center">
                   <X className="w-4 h-4" />
                 </button>
               </>
             )}
-            {!isPending && item.sent_at && <span className="text-[10px] text-muted-foreground">{new Date(item.sent_at).toLocaleDateString()}</span>}
             {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
           </div>
         </button>
 
+        {/* Expanded view — full message */}
         {isExpanded && (
-          <div className="border-t border-border px-5 py-4 space-y-3">
-            <div>
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Research</p>
-              <p className="text-xs text-muted-foreground leading-relaxed">{item.research_context}</p>
+          <div className="border-t border-border">
+            {/* Recipient details bar */}
+            <div className="px-5 py-3 bg-secondary/30 flex items-center gap-6 text-xs text-muted-foreground flex-wrap">
+              <span className="flex items-center gap-1.5">
+                <User className="w-3 h-3" /> <strong className="text-foreground font-medium">To:</strong> {item.contact_name}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Mail className="w-3 h-3" /> {item.contact_email}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Building2 className="w-3 h-3" /> {item.contact_company}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <ChannelIcon className="w-3 h-3" /> via {chLabel}
+              </span>
             </div>
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-                  {isPending ? "Draft" : "Sent message"} ({item.channel})
-                </p>
-                {isPending && (
-                  <button onClick={() => { if (isEditing) setEditingId(null); else { setEditContent(item.drafted_content); setEditingId(item.id); } }}
-                    className="text-[10px] text-primary flex items-center gap-1"><Edit3 className="w-3 h-3" /> {isEditing ? "Cancel" : "Edit"}</button>
+
+            <div className="px-5 py-4 space-y-4">
+              {/* Research context */}
+              {item.research_context && (
+                <div className="rounded-lg bg-info/5 border border-info/10 px-4 py-3">
+                  <p className="text-[10px] uppercase tracking-wider text-info font-medium mb-1 flex items-center gap-1.5">
+                    <Info className="w-3 h-3" /> Sammy's Research
+                  </p>
+                  <p className="text-xs text-foreground leading-relaxed">{item.research_context}</p>
+                </div>
+              )}
+
+              {/* Message body */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                    {isPending ? "Draft Message" : "Sent Message"}
+                  </p>
+                  {isPending && (
+                    <button onClick={() => { if (isEditing) setEditingId(null); else { setEditContent(item.drafted_content); setEditingId(item.id); } }}
+                      className="text-xs text-primary flex items-center gap-1 hover:underline"><Edit3 className="w-3 h-3" /> {isEditing ? "Cancel" : "Edit"}</button>
+                  )}
+                </div>
+
+                {isEditing ? (
+                  <div className="space-y-2">
+                    <textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} rows={6}
+                      className="w-full text-sm bg-background border border-border rounded-lg px-4 py-3 text-foreground outline-none focus:ring-2 focus:ring-primary/20 resize-none leading-relaxed" />
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" onClick={() => handleEdit(item.id)} disabled={isLoading} className="gap-1.5 text-xs">
+                        {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} Save Changes
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => setEditingId(null)} className="text-xs">Cancel</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-border bg-background px-5 py-4">
+                    <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{item.drafted_content}</p>
+                  </div>
                 )}
               </div>
-              {isEditing ? (
-                <div className="space-y-2">
-                  <textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} rows={4}
-                    className="w-full text-sm bg-secondary rounded-lg px-3 py-2 text-foreground outline-none resize-none" />
-                  <button onClick={() => handleEdit(item.id)} disabled={isLoading} className="text-xs text-primary flex items-center gap-1">
-                    {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />} Save
-                  </button>
-                </div>
-              ) : (
-                <div className="bg-secondary rounded-lg px-4 py-3">
-                  <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{item.drafted_content}</p>
+
+              {/* Actions */}
+              {isPending && (
+                <div className="flex items-center gap-3 pt-1">
+                  <Button size="sm" onClick={() => handleApprove(item.id)} disabled={isLoading} className="gap-2 bg-success hover:bg-success/90">
+                    {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />} Approve & Send
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => handleReject(item.id)} disabled={isLoading} className="gap-2">
+                    <X className="w-3.5 h-3.5" /> Skip This
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => { setEditContent(item.drafted_content); setEditingId(item.id); }} className="gap-2 text-muted-foreground">
+                    <Edit3 className="w-3.5 h-3.5" /> Edit First
+                  </Button>
                 </div>
               )}
             </div>
-            {isPending && (
-              <div className="flex items-center gap-2 pt-2">
-                <Button size="sm" onClick={() => handleApprove(item.id)} disabled={isLoading} className="gap-1.5 text-xs bg-success hover:bg-success/90">
-                  {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />} Approve & Send
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => handleReject(item.id)} disabled={isLoading} className="gap-1.5 text-xs">
-                  <X className="w-3.5 h-3.5" /> Skip
-                </Button>
-              </div>
-            )}
           </div>
         )}
       </motion.div>
@@ -179,7 +257,7 @@ const MessagesView = ({ onCountUpdate }: MessagesViewProps) => {
         <div>
           <h2 className="font-display text-2xl font-bold text-foreground">Messages</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            {pending.length > 0 ? `${pending.length} message${pending.length !== 1 ? "s" : ""} awaiting your review` : "All clear"}
+            {pending.length > 0 ? `${pending.length} message${pending.length !== 1 ? "s" : ""} awaiting your review` : "All clear — Sammy has nothing pending"}
           </p>
         </div>
         <div className="flex items-center gap-2">
