@@ -14,6 +14,7 @@ import {
   type QueueItem, type ActivityEntry,
 } from "@/services/api";
 import { ORG_KEY, ACTIVITY_STATUS_ICONS, ACTIVITY_STATUS_COLORS } from "@/lib/constants";
+import { DEMO_ORG_ID, demoQueue, demoActivity } from "@/lib/demo-data";
 
 const statusIcons = ACTIVITY_STATUS_ICONS;
 const statusColors = ACTIVITY_STATUS_COLORS;

@@ -14,6 +14,10 @@ import { SmsPlugin } from "./channels/sms.js";
 // Job runner
 import { startJobRunner } from "./services/job-queue.js";
 
+// Auth
+import authRouter from "./auth/routes.js";
+import { requireAuth } from "./middleware/auth.js";
+
 // Routes
 import onboardingRouter from "./routes/onboarding.js";
 import teammateRouter from "./routes/teammate.js";
@@ -46,7 +50,24 @@ async function start() {
 
   const app = express();
 
-  app.use(cors({ origin: true, credentials: true }));
+  const allowedOrigins = config.corsOrigin
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean);
+
+  app.use(
+    cors({
+      origin: (origin, callback) => {
+        // Allow requests with no origin (curl, server-to-server)
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error(`Origin ${origin} not allowed by CORS`));
+        }
+      },
+      credentials: true,
+    })
+  );
   app.use(express.json({ limit: "10mb" }));
 
   app.get("/api/health", (_req, res) => {
@@ -60,21 +81,25 @@ async function start() {
     res.json(org);
   });
 
+  // Public routes (no auth required)
+  app.use("/api/auth", authRouter);
   app.use("/api/onboarding", onboardingRouter);
-  app.use("/api/teammate", teammateRouter);
-  app.use("/api/queue", touchQueueRouter);
-  app.use("/api/contacts", contactsRouter);
-  app.use("/api/activity", activityRouter);
-  app.use("/api/standup", standupRouter);
-  app.use("/api/trigger", triggerRouter);
-  app.use("/api/knowledge", knowledgeRouter);
-  app.use("/api/integrations", integrationsRouter);
-  app.use("/api/billing", billingRouter);
-  app.use("/api/sequences", sequencesRouter);
-  app.use("/api/jobs", jobsRouter);
-  app.use("/api/context-overrides", contextOverridesRouter);
-  app.use("/api/approvals", approvalsRouter);
-  app.use("/api/replies", repliesRouter);
+
+  // Protected routes (auth required)
+  app.use("/api/teammate", requireAuth, teammateRouter);
+  app.use("/api/queue", requireAuth, touchQueueRouter);
+  app.use("/api/contacts", requireAuth, contactsRouter);
+  app.use("/api/activity", requireAuth, activityRouter);
+  app.use("/api/standup", requireAuth, standupRouter);
+  app.use("/api/trigger", requireAuth, triggerRouter);
+  app.use("/api/knowledge", requireAuth, knowledgeRouter);
+  app.use("/api/integrations", requireAuth, integrationsRouter);
+  app.use("/api/billing", requireAuth, billingRouter);
+  app.use("/api/sequences", requireAuth, sequencesRouter);
+  app.use("/api/jobs", requireAuth, jobsRouter);
+  app.use("/api/context-overrides", requireAuth, contextOverridesRouter);
+  app.use("/api/approvals", requireAuth, approvalsRouter);
+  app.use("/api/replies", requireAuth, repliesRouter);
 
   app.listen(config.port, () => {
     console.log(`Vaigence API running on http://localhost:${config.port}`);

@@ -11,4 +11,7 @@ export const config = {
   databaseUrl: process.env.DATABASE_URL || "",
   corsOrigin: process.env.CORS_ORIGIN || "http://localhost:8080",
   vaultKey: process.env.VAULT_KEY || "",
+  paystackSecretKey: process.env.PAYSTACK_SECRET_KEY || "",
+  supabaseUrl: process.env.SUPABASE_URL || "",
+  supabaseAnonKey: process.env.SUPABASE_ANON_KEY || "",
 };

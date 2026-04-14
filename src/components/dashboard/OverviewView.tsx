@@ -13,6 +13,7 @@ import {
 } from "@/services/api";
 
 import { API_BASE, ORG_KEY, ACTIVITY_STATUS_ICONS, ACTIVITY_STATUS_COLORS } from "@/lib/constants";
+import { DEMO_ORG_ID, demoStandup, demoQueue, demoActivity, demoContacts } from "@/lib/demo-data";
 
 const statusIcons = ACTIVITY_STATUS_ICONS;
 const statusColors = ACTIVITY_STATUS_COLORS;
@@ -33,8 +34,22 @@ const OverviewView = () => {
   const [approvalGates, setApprovalGates] = useState<any[]>([]);
   const [gateLoading, setGateLoading] = useState<string | null>(null);
 
+  const isDemo = orgId === DEMO_ORG_ID;
+
   const loadData = async () => {
     if (!orgId) return;
+
+    // Use static demo data when backend is unreachable
+    if (isDemo) {
+      setStandup(demoStandup);
+      setQueue(demoQueue);
+      setActivity(demoActivity);
+      setContacts(demoContacts);
+      setApprovalGates([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       const [s, q, a, c, gates] = await Promise.all([
@@ -44,12 +59,27 @@ const OverviewView = () => {
         fetchContacts(orgId).catch(() => []),
         fetch(`${API_BASE}/api/approvals?org_id=${orgId}`).then(r => r.json()).catch(() => []),
       ]);
-      setStandup(s);
-      setQueue(q);
-      setActivity(a);
-      setContacts(c);
+      // If all calls returned empty/null, fall back to demo data
+      if (!s && q.length === 0 && a.length === 0 && c.length === 0) {
+        setStandup(demoStandup);
+        setQueue(demoQueue);
+        setActivity(demoActivity);
+        setContacts(demoContacts);
+      } else {
+        setStandup(s);
+        setQueue(q);
+        setActivity(a);
+        setContacts(c);
+      }
       setApprovalGates(gates);
-    } catch (err) { toast.error("Failed to load dashboard data"); } finally { setLoading(false); }
+    } catch (err) {
+      // API completely unreachable — use demo data
+      setStandup(demoStandup);
+      setQueue(demoQueue);
+      setActivity(demoActivity);
+      setContacts(demoContacts);
+      setApprovalGates([]);
+    } finally { setLoading(false); }
   };
 
   useEffect(() => { loadData(); }, [orgId]);

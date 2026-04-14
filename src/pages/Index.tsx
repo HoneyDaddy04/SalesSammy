@@ -4,6 +4,7 @@ import { Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Sidebar from "@/components/dashboard/Sidebar";
 import logo from "@/assets/branding/mark-dark.svg";
+import { DEMO_ORG_ID } from "@/lib/demo-data";
 import OverviewView from "@/components/dashboard/OverviewView";
 import MessagesView from "@/components/dashboard/MessagesView";
 import ThreadsView from "@/components/dashboard/ThreadsView";
@@ -49,7 +50,10 @@ const Index = () => {
         .then(data => {
           if (data.id) localStorage.setItem(ORG_KEY, data.id);
         })
-        .catch(() => { toast.error("Failed to initialize session"); });
+        .catch(() => {
+          // Backend unreachable — use demo mode
+          localStorage.setItem(ORG_KEY, DEMO_ORG_ID);
+        });
     }
   }, []);
 

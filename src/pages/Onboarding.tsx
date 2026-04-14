@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { ORG_KEY, API_BASE } from "@/lib/constants";
-import { startOnboarding, answerOnboarding, sendOnboardingFeedback } from "@/services/api";
+import { startOnboarding, answerOnboarding, sendOnboardingFeedback, authSignup, setAuthToken } from "@/services/api";
 import logo from "@/assets/branding/mark-dark.svg";
 
 const steps = [
@@ -47,6 +47,7 @@ const Onboarding = () => {
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [company, setCompany] = useState("");
   const [answers, setAnswers] = useState<Record<string, string>>({
     business_description: "", target_audience: "", lead_source_type: "",
@@ -60,7 +61,7 @@ const Onboarding = () => {
   // Check if a specific step has been filled
   const isStepComplete = (s: number) => {
     switch (s) {
-      case 0: return company.trim().length > 0;
+      case 0: return company.trim().length > 0 && email.trim().length > 0 && password.trim().length >= 6;
       case 1: return answers.business_description.trim().length > 0;
       case 2: return answers.target_audience.trim().length > 0;
       case 3: return answers.lead_trigger_signals.trim().length > 0 && answers.goal.trim().length > 0;
@@ -92,9 +93,15 @@ const Onboarding = () => {
     setShowValidation(false);
     setLoading(true);
     try {
+      // Sign up the user first
+      const signupRes = await authSignup(email, password, name);
+      if (signupRes.access_token) {
+        setAuthToken(signupRes.access_token, signupRes.refresh_token || undefined);
+      }
+
       const startRes = await startOnboarding(name, email, company);
       const sid = startRes.session_id;
-      const oid = startRes.org_id;
+      const oid = signupRes.org_id || startRes.org_id;
 
       const orderedAnswers = [
         answers.business_description, answers.target_audience,
@@ -176,7 +183,8 @@ const Onboarding = () => {
                     <div><h2 className="font-display text-2xl font-bold text-foreground">Meet Sammy, your sales agent</h2><p className="text-sm text-muted-foreground mt-2">Quick setup, about 10 minutes. Your follow-up specialist will be ready to work.</p></div>
                     <div className="space-y-3">
                       <div><Label className="text-xs">Your name</Label><Input value={name} onChange={e => setName(e.target.value)} placeholder="Alex Johnson" /></div>
-                      <div><Label className="text-xs">Email</Label><Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="alex@company.com" /></div>
+                      <div><Label className="text-xs">Email <span className="text-destructive">*</span></Label><Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="alex@company.com" className={cn(showValidation && !email.trim() && "border-destructive")} /></div>
+                      <div><Label className="text-xs">Password <span className="text-destructive">*</span></Label><Input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Min 6 characters" className={cn(showValidation && password.length < 6 && "border-destructive")} /></div>
                       <div><Label className="text-xs">Company name <span className="text-destructive">*</span></Label><Input value={company} onChange={e => setCompany(e.target.value)} placeholder="Your company" className={cn(showValidation && !company.trim() && "border-destructive")} /></div>
                     </div>
                   </div>

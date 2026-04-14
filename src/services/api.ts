@@ -1,8 +1,29 @@
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
+const AUTH_TOKEN_KEY = "sb-access-token";
+const AUTH_REFRESH_KEY = "sb-refresh-token";
+
+export function setAuthToken(token: string, refreshToken?: string) {
+  localStorage.setItem(AUTH_TOKEN_KEY, token);
+  if (refreshToken) localStorage.setItem(AUTH_REFRESH_KEY, refreshToken);
+}
+
+export function getAuthToken(): string | null {
+  return localStorage.getItem(AUTH_TOKEN_KEY);
+}
+
+export function clearAuthToken() {
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+  localStorage.removeItem(AUTH_REFRESH_KEY);
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const token = getAuthToken();
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
+    headers,
     ...options,
   });
   if (!res.ok) {
@@ -243,4 +264,44 @@ export function triggerScan(orgId: string): Promise<{ status: string; touches_dr
 
 export function checkHealth(): Promise<{ status: string }> {
   return request("/api/health");
+}
+
+// --- Auth ---
+
+export interface AuthResponse {
+  user: { id: string; email: string };
+  org_id: string | null;
+  access_token: string | null;
+  refresh_token: string | null;
+}
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  name: string;
+  org_id: string;
+  role: string;
+  created_at: string;
+}
+
+export function authSignup(email: string, password: string, name: string): Promise<AuthResponse> {
+  return request("/api/auth/signup", {
+    method: "POST",
+    body: JSON.stringify({ email, password, name }),
+  });
+}
+
+export function authLogin(email: string, password: string): Promise<AuthResponse> {
+  return request("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export function authLogout(): Promise<{ status: string }> {
+  return request("/api/auth/logout", { method: "POST" });
+}
+
+export function authMe(): Promise<UserProfile> {
+  return request("/api/auth/me");
 }

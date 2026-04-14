@@ -278,6 +278,16 @@ CREATE TABLE IF NOT EXISTS contact_memory (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- User profiles (auth)
+CREATE TABLE IF NOT EXISTS user_profiles (
+  id TEXT PRIMARY KEY,
+  email TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL DEFAULT '',
+  org_id TEXT REFERENCES organizations(id),
+  role TEXT NOT NULL DEFAULT 'owner',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Pattern insights
 CREATE TABLE IF NOT EXISTS pattern_insights (
   id TEXT PRIMARY KEY,

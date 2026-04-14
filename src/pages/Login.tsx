@@ -3,9 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, ArrowLeft, Eye, EyeOff, Play, Loader2 } from "lucide-react";
 import { ORG_KEY, API_BASE } from "@/lib/constants";
+import { DEMO_ORG_ID } from "@/lib/demo-data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { authLogin, setAuthToken } from "@/services/api";
 import logo from "@/assets/branding/mark-dark.svg";
 import logoLight from "@/assets/branding/mark-on-dark.svg";
 
@@ -16,11 +18,27 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // For now, try to auto-detect org
-    autoDetectOrg().then(() => navigate("/dashboard"));
+    setError("");
+    setLoginLoading(true);
+    try {
+      const res = await authLogin(email, password);
+      if (res.access_token) {
+        setAuthToken(res.access_token, res.refresh_token || undefined);
+      }
+      if (res.org_id) {
+        localStorage.setItem(ORG_KEY, res.org_id);
+      }
+      navigate("/dashboard");
+    } catch (err: any) {
+      setError(err.message || "Login failed");
+    } finally {
+      setLoginLoading(false);
+    }
   };
 
   const handleDemoLogin = async () => {
@@ -38,7 +56,8 @@ const Login = () => {
         localStorage.setItem(ORG_KEY, data.id);
       }
     } catch {
-      // Backend not running, proceed anyway
+      // Backend not running — use demo mode
+      localStorage.setItem(ORG_KEY, DEMO_ORG_ID);
     }
   };
 
@@ -99,7 +118,8 @@ const Login = () => {
               <label className="flex items-center gap-2 text-xs text-muted-foreground"><input type="checkbox" className="rounded border-border" /> Remember me</label>
               <button type="button" className="text-xs text-primary hover:underline">Forgot password?</button>
             </div>
-            <Button type="submit" className="w-full h-10 gap-2">Log in <ArrowRight className="w-4 h-4" /></Button>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+            <Button type="submit" disabled={loginLoading} className="w-full h-10 gap-2">{loginLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null} Log in <ArrowRight className="w-4 h-4" /></Button>
           </form>
 
           <div className="relative my-5">
