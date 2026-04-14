@@ -73,7 +73,7 @@ const OverviewView = () => {
       }
       setApprovalGates(gates);
     } catch (err) {
-      // API completely unreachable — use demo data
+      // API completely unreachable - use demo data
       setStandup(demoStandup);
       setQueue(demoQueue);
       setActivity(demoActivity);

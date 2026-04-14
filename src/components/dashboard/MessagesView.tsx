@@ -123,7 +123,7 @@ const MessagesView = ({ onCountUpdate }: MessagesViewProps) => {
       <motion.div key={item.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -20 }}
         className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
 
-        {/* Header bar — always visible */}
+        {/* Header bar - always visible */}
         <button onClick={() => setExpandedId(isExpanded ? null : item.id)}
           className="w-full text-left px-5 py-4 flex items-start gap-4 hover:bg-secondary/30 transition-colors">
 
@@ -146,7 +146,7 @@ const MessagesView = ({ onCountUpdate }: MessagesViewProps) => {
               </span>
               <span className="text-[10px] text-muted-foreground">{item.sequence_name.replace(/_/g, " ")}</span>
             </div>
-            {/* Message preview — first line only */}
+            {/* Message preview - first line only */}
             {!isExpanded && (
               <p className="text-xs text-muted-foreground mt-2 truncate">{item.drafted_content.split("\n")[0]}</p>
             )}
@@ -170,7 +170,7 @@ const MessagesView = ({ onCountUpdate }: MessagesViewProps) => {
           </div>
         </button>
 
-        {/* Expanded view — full message */}
+        {/* Expanded view - full message */}
         {isExpanded && (
           <div className="border-t border-border">
             {/* Recipient details bar */}
@@ -257,7 +257,7 @@ const MessagesView = ({ onCountUpdate }: MessagesViewProps) => {
         <div>
           <h2 className="font-display text-2xl font-bold text-foreground">Messages</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            {pending.length > 0 ? `${pending.length} message${pending.length !== 1 ? "s" : ""} awaiting your review` : "All clear — Sammy has nothing pending"}
+            {pending.length > 0 ? `${pending.length} message${pending.length !== 1 ? "s" : ""} awaiting your review` : "All clear. Sammy has nothing pending"}
           </p>
         </div>
         <div className="flex items-center gap-2">

@@ -56,7 +56,7 @@ const Login = () => {
         localStorage.setItem(ORG_KEY, data.id);
       }
     } catch {
-      // Backend not running — use demo mode
+      // Backend not running - use demo mode
       localStorage.setItem(ORG_KEY, DEMO_ORG_ID);
     }
   };

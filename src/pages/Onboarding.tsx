@@ -201,7 +201,7 @@ const Onboarding = () => {
 
                 {step === 2 && (
                   <div className="space-y-6">
-                    <div><h2 className="font-display text-2xl font-bold text-foreground">Who are you trying to reach?</h2><p className="text-sm text-muted-foreground mt-2">Role, industry, company size — whatever matters.</p></div>
+                    <div><h2 className="font-display text-2xl font-bold text-foreground">Who are you trying to reach?</h2><p className="text-sm text-muted-foreground mt-2">Role, industry, company size, whatever matters.</p></div>
                     <textarea value={answers.target_audience} onChange={e => updateAnswer("target_audience", e.target.value)}
                       placeholder="Founders and ops leads at companies with 5-30 people. Usually overwhelmed, juggling too many tools."
                       rows={4} className={cn("w-full bg-secondary rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary/20 resize-none", showValidation && !answers.target_audience.trim() && "ring-2 ring-destructive/30")} />
@@ -210,7 +210,7 @@ const Onboarding = () => {
 
                 {step === 3 && (
                   <div className="space-y-6">
-                    <div><h2 className="font-display text-2xl font-bold text-foreground">Triggers & Goals</h2><p className="text-sm text-muted-foreground mt-2">The most important step — what signals say someone needs you now?</p></div>
+                    <div><h2 className="font-display text-2xl font-bold text-foreground">Triggers & Goals</h2><p className="text-sm text-muted-foreground mt-2">The most important step. What signals say someone needs you now?</p></div>
                     <div className="space-y-4">
                       <div><Label className="text-xs font-medium">What's a sign they need you right now? <span className="text-destructive">*</span></Label>
                         <textarea value={answers.lead_trigger_signals} onChange={e => updateAnswer("lead_trigger_signals", e.target.value)}
@@ -253,7 +253,7 @@ const Onboarding = () => {
                   <div className="space-y-6">
                     <div><h2 className="font-display text-2xl font-bold text-foreground">Your voice</h2><p className="text-sm text-muted-foreground mt-2">Paste 2-3 messages you've sent that got good responses. This is how Sammy learns to sound like you.</p></div>
                     <textarea value={answers.voice_examples} onChange={e => updateAnswer("voice_examples", e.target.value)}
-                      placeholder={"Hey Sarah — saw you just brought on 3 new people. Congrats! That's usually when task tracking starts breaking.\n\n---\n\nQuick one — noticed your team's growing fast. Most founders at your stage spend 5+ hours/week just keeping everyone aligned."}
+                      placeholder={"Hey Sarah, saw you just brought on 3 new people. Congrats! That's usually when task tracking starts breaking.\n\n---\n\nQuick one. Noticed your team's growing fast. Most founders at your stage spend 5+ hours/week just keeping everyone aligned."}
                       rows={8} className={cn("w-full bg-secondary rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary/20 resize-none", showValidation && !answers.voice_examples.trim() && "ring-2 ring-destructive/30")} />
                   </div>
                 )}
@@ -271,7 +271,7 @@ const Onboarding = () => {
                   <div className="space-y-6">
                     <div><h2 className="font-display text-2xl font-bold text-foreground">Who should Sammy escalate to?</h2><p className="text-sm text-muted-foreground mt-2">When a lead asks something beyond scope, who gets the ping? <span className="text-muted-foreground/60">(Optional)</span></p></div>
                     <textarea value={answers.escalation} onChange={e => updateAnswer("escalation", e.target.value)}
-                      placeholder="Alex — alex@company.com — ping on Slack or email"
+                      placeholder="Alex, alex@company.com, ping on Slack or email"
                       rows={3} className="w-full bg-secondary rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary/20 resize-none" />
 
                     {/* Validation summary when trying to finish with missing fields */}
@@ -311,7 +311,7 @@ const Onboarding = () => {
                       <div className="flex items-center gap-2 mb-2"><CheckCircle2 className="w-4 h-4 text-success" /><p className="text-sm font-medium text-foreground">Setup Complete</p></div>
                       <ul className="text-xs text-muted-foreground space-y-1 ml-6">
                         <li>Business context captured</li><li>Voice calibrated from your samples</li>
-                        <li>Channels: {selectedChannels.join(", ")}</li><li>Starting in Shadow Mode — all messages need your approval</li>
+                        <li>Channels: {selectedChannels.join(", ")}</li><li>Starting in Shadow Mode. All messages need your approval</li>
                       </ul>
                     </div>
                   </div>

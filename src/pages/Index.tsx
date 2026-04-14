@@ -51,7 +51,7 @@ const Index = () => {
           if (data.id) localStorage.setItem(ORG_KEY, data.id);
         })
         .catch(() => {
-          // Backend unreachable — use demo mode
+          // Backend unreachable - use demo mode
           localStorage.setItem(ORG_KEY, DEMO_ORG_ID);
         });
     }
