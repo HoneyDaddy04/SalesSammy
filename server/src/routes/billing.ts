@@ -1,6 +1,5 @@
 import { Router, raw } from "express";
 import crypto from "crypto";
-import axios from "axios";
 import { queryOne, run } from "../db/database.js";
 import { config } from "../config/env.js";
 
@@ -36,22 +35,29 @@ router.post("/initialize", async (req, res) => {
   }
 
   try {
-    const response = await axios.post(
-      `${PAYSTACK_API}/transaction/initialize`,
-      {
+    const response = await fetch(`${PAYSTACK_API}/transaction/initialize`, {
+      method: "POST",
+      headers: paystackHeaders(),
+      body: JSON.stringify({
         email,
         amount: planConfig.amount * 100, // Paystack expects kobo/cents
         metadata: { org_id, plan },
-      },
-      { headers: paystackHeaders() }
-    );
+      }),
+    });
+
+    const data = await response.json() as any;
+    if (!response.ok) {
+      console.error("Paystack initialize error:", data);
+      res.status(502).json({ error: "Failed to initialize payment" });
+      return;
+    }
 
     res.json({
-      authorization_url: response.data.data.authorization_url,
-      reference: response.data.data.reference,
+      authorization_url: data.data.authorization_url,
+      reference: data.data.reference,
     });
   } catch (err: any) {
-    console.error("Paystack initialize error:", err.response?.data || err.message);
+    console.error("Paystack initialize error:", err.message);
     res.status(502).json({ error: "Failed to initialize payment" });
   }
 });

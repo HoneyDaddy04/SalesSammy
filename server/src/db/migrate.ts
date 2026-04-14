@@ -191,6 +191,8 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   touches_limit INTEGER NOT NULL DEFAULT 500,
   touches_used INTEGER NOT NULL DEFAULT 0,
   price_monthly INTEGER NOT NULL DEFAULT 0,
+  paystack_reference TEXT,
+  paystack_customer_email TEXT,
   billing_cycle_start TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
