@@ -18,7 +18,6 @@ const Login = () => {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // For now, try to auto-detect org
     autoDetectOrg().then(() => navigate("/dashboard"));
   };
 
@@ -45,25 +44,25 @@ const Login = () => {
     <div className="min-h-screen bg-background flex">
       <div className="hidden lg:flex w-1/2 bg-primary text-primary-foreground flex-col justify-between p-12">
         <div className="flex items-center gap-3">
-          <img src={logo} alt="Sales Sammy" className="w-10 h-10 rounded-md brightness-0 invert" />
-          <span className="font-display text-2xl font-bold">Sales Sammy</span>
+          <img src={logo} alt="Sales Sammy" className="w-9 h-9 rounded-md brightness-0 invert" />
+          <span className="text-xl font-semibold">Sales Sammy</span>
         </div>
         <div>
-          <h1 className="font-display text-4xl font-bold leading-tight mb-4">
+          <h1 className="text-4xl font-semibold leading-tight mb-4">
             Your teammate is<br />working right now.
           </h1>
-          <p className="text-lg opacity-80 max-w-md">
+          <p className="text-lg opacity-80 max-w-md leading-relaxed">
             Log in to see what your follow-up teammate has been doing. Drafts ready for approval, replies handled, pipeline moving.
           </p>
         </div>
-        <div className="grid grid-cols-3 gap-6">
+        <div className="flex gap-10 pt-6 border-t border-white/20">
           {[
             { value: "24/7", label: "Always following up" },
             { value: "80%", label: "Sales need 5+ touches" },
             { value: "100x", label: "Better if you reply in 5 min" },
           ].map((stat) => (
             <div key={stat.label}>
-              <p className="font-display text-2xl font-bold">{stat.value}</p>
+              <p className="text-2xl font-semibold">{stat.value}</p>
               <p className="text-sm opacity-70">{stat.label}</p>
             </div>
           ))}
@@ -74,21 +73,21 @@ const Login = () => {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="w-full max-w-sm">
           <div className="lg:hidden flex items-center gap-2.5 mb-10">
             <img src={logo} alt="Sales Sammy" className="w-8 h-8 rounded-md" />
-            <span className="font-display text-xl font-bold">Sales Sammy</span>
+            <span className="text-lg font-semibold">Sales Sammy</span>
           </div>
 
-          <h2 className="font-display text-3xl font-bold mb-2">Welcome back</h2>
+          <h2 className="text-3xl font-semibold mb-2">Welcome back</h2>
           <p className="text-muted-foreground mb-8">Log in to your Sales Sammy dashboard</p>
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="you@company.com" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1.5 h-12" />
+              <Input id="email" type="email" placeholder="you@company.com" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1.5 h-11" />
             </div>
             <div>
               <Label htmlFor="password">Password</Label>
               <div className="relative mt-1.5">
-                <Input id="password" type={showPassword ? "text" : "password"} placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} className="h-12 pr-10" />
+                <Input id="password" type={showPassword ? "text" : "password"} placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} className="h-11 pr-10" />
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -98,7 +97,7 @@ const Login = () => {
               <label className="flex items-center gap-2 text-sm text-muted-foreground"><input type="checkbox" className="rounded border-border" /> Remember me</label>
               <button type="button" className="text-sm text-primary hover:underline">Forgot password?</button>
             </div>
-            <Button type="submit" className="w-full h-12 gap-2 text-base">Log in <ArrowRight className="w-4 h-4" /></Button>
+            <Button type="submit" className="w-full h-11 gap-2">Log in <ArrowRight className="w-4 h-4" /></Button>
           </form>
 
           <div className="relative my-8">
@@ -106,7 +105,7 @@ const Login = () => {
             <div className="relative flex justify-center text-xs"><span className="bg-background px-3 text-muted-foreground">or</span></div>
           </div>
 
-          <Button variant="outline" onClick={handleDemoLogin} disabled={demoLoading} className="w-full h-12 gap-2 text-base border-dashed">
+          <Button variant="outline" onClick={handleDemoLogin} disabled={demoLoading} className="w-full h-11 gap-2 border-border border-dashed">
             {demoLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />} Try Demo Dashboard
           </Button>
 
