@@ -57,7 +57,7 @@ const OverviewView = () => {
         fetchQueue(orgId, "pending_approval").catch(() => []),
         fetchActivity(orgId, 10).catch(() => []),
         fetchContacts(orgId).catch(() => []),
-        fetch(`${API_BASE}/api/approvals?org_id=${orgId}`).then(r => r.json()).catch(() => []),
+        fetch(`${API_BASE}/api/approvals?org_id=${orgId}`).then(r => r.json()).then(r => Array.isArray(r) ? r : []).catch(() => []),
       ]);
       // If all calls returned empty/null, fall back to demo data
       if (!s && q.length === 0 && a.length === 0 && c.length === 0) {

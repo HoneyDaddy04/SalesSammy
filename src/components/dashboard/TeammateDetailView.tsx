@@ -53,29 +53,54 @@ const TeammateDetailView = () => {
   const [activity, setActivity] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
 
+  const demoTeammate = {
+    id: "demo-teammate", org_id: orgId, name: "Sales Sammy", status: "active",
+    persona_prompt: "You are Sales Sammy, a friendly and persistent sales follow-up specialist. You write in a warm, professional tone. You always personalize based on the lead's company and role.",
+    business_description: "We help businesses automate their sales follow-up so no customer gets forgotten.",
+    target_audience: "Founders, sales leads, and growth teams at companies with 5-50 employees.",
+    lead_trigger_signals: "Recently raised funding, hiring for sales roles, posted about growth challenges.",
+    goal: "Book a 15-minute demo call",
+    voice_examples: JSON.stringify(["Hey Sarah, saw you just brought on 3 new people. Congrats!", "Quick one. Noticed your team is growing fast."]),
+    guardrails: JSON.stringify(["Never discuss competitor pricing", "Don't promise custom features"]),
+    escalation_contact: "founder@company.com",
+    operating_instructions: "Start in shadow mode. All messages need approval before sending.",
+    primary_channel: "email", secondary_channel: "whatsapp", created_at: new Date().toISOString(),
+  };
+
   const loadData = async () => {
     if (!orgId) return;
     setLoading(true);
     try {
+      const safeArray = (p: Promise<any>) => p.then(r => Array.isArray(r) ? r : []).catch(() => []);
       const [tRes, cRes, aRes, sRes] = await Promise.all([
-        fetch(`${API_BASE}/api/teammate?org_id=${orgId}`).then(r => r.json()),
-        fetch(`${API_BASE}/api/contacts?org_id=${orgId}`).then(r => r.json()).catch(() => []),
-        fetch(`${API_BASE}/api/activity?org_id=${orgId}&limit=8`).then(r => r.json()).catch(() => []),
+        fetch(`${API_BASE}/api/teammate?org_id=${orgId}`).then(r => r.json()).catch(() => null),
+        safeArray(fetch(`${API_BASE}/api/contacts?org_id=${orgId}`).then(r => r.json())),
+        safeArray(fetch(`${API_BASE}/api/activity?org_id=${orgId}&limit=8`).then(r => r.json())),
         fetch(`${API_BASE}/api/teammate/stats?org_id=${orgId}`).then(r => r.json()).catch(() => null),
       ]);
-      setTeammate(tRes);
+      const t = tRes && tRes.id ? tRes : demoTeammate;
+      setTeammate(t);
       setContacts(cRes);
       setActivity(aRes);
       setStats(sRes);
 
       // Init edit states
-      setEditPersona(tRes.persona_prompt || "");
-      setEditGuardrails(JSON.parse(tRes.guardrails || "[]"));
-      setEditVoice(JSON.parse(tRes.voice_examples || "[]"));
-      setEditEscalation(typeof tRes.escalation_contact === "string" ? tRes.escalation_contact : JSON.stringify(tRes.escalation_contact));
-      setEditGoal(tRes.goal || "");
-      setEditTriggers(tRes.lead_trigger_signals || "");
-    } catch (err) { toast.error("Failed to load teammate data"); } finally { setLoading(false); }
+      setEditPersona(t.persona_prompt || "");
+      try { setEditGuardrails(JSON.parse(t.guardrails || "[]")); } catch { setEditGuardrails([]); }
+      try { setEditVoice(JSON.parse(t.voice_examples || "[]")); } catch { setEditVoice([]); }
+      setEditEscalation(typeof t.escalation_contact === "string" ? t.escalation_contact : JSON.stringify(t.escalation_contact || ""));
+      setEditGoal(t.goal || "");
+      setEditTriggers(t.lead_trigger_signals || "");
+    } catch (err) {
+      // Full fallback
+      setTeammate(demoTeammate);
+      setEditPersona(demoTeammate.persona_prompt);
+      try { setEditGuardrails(JSON.parse(demoTeammate.guardrails)); } catch { setEditGuardrails([]); }
+      try { setEditVoice(JSON.parse(demoTeammate.voice_examples)); } catch { setEditVoice([]); }
+      setEditEscalation(demoTeammate.escalation_contact);
+      setEditGoal(demoTeammate.goal);
+      setEditTriggers(demoTeammate.lead_trigger_signals);
+    } finally { setLoading(false); }
   };
 
   useEffect(() => { loadData(); }, [orgId]);

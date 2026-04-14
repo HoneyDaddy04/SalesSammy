@@ -307,13 +307,14 @@ const WorkflowsView = () => {
   }, [showAddMenu]);
 
   useEffect(() => {
+    const safeArray = (p: Promise<any>) => p.then(r => Array.isArray(r) ? r : []).catch(() => []);
     Promise.all([
-      fetch(`${API_BASE}/api/sequences`).then(r => r.json()).catch(() => []),
-      orgId ? fetch(`${API_BASE}/api/contacts?org_id=${orgId}`).then(r => r.json()).catch(() => []) : Promise.resolve([]),
+      safeArray(fetch(`${API_BASE}/api/sequences`).then(r => r.json())),
+      orgId ? safeArray(fetch(`${API_BASE}/api/contacts?org_id=${orgId}`).then(r => r.json())) : Promise.resolve([]),
       orgId ? fetch(`${API_BASE}/api/teammate?org_id=${orgId}`).then(r => r.json()).catch(() => null) : Promise.resolve(null),
-      orgId ? fetch(`${API_BASE}/api/integrations?org_id=${orgId}`).then(r => r.json()).catch(() => []) : Promise.resolve([]),
+      orgId ? safeArray(fetch(`${API_BASE}/api/integrations?org_id=${orgId}`).then(r => r.json())) : Promise.resolve([]),
     ]).then(([s, c, t, intg]) => {
-      setSequences(s); setContacts(c); setTeammate(t); setIntegrations(intg);
+      setSequences(s); setContacts(c); setTeammate(t && !t.error ? t : null); setIntegrations(intg);
       if (t?.guardrails) {
         try { setEscalationRules(JSON.parse(t.guardrails)); } catch {}
       }
