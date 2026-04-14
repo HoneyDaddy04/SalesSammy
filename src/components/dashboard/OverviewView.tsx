@@ -12,7 +12,7 @@ import {
   type StandupData, type QueueItem, type ActivityEntry, type ApiContact,
 } from "@/services/api";
 
-import { API_BASE, ORG_KEY, ACTIVITY_STATUS_ICONS, ACTIVITY_STATUS_COLORS } from "@/lib/constants";
+import { API_BASE, ORG_KEY, ACTIVITY_STATUS_ICONS, ACTIVITY_STATUS_COLORS, CHANNEL_CONFIG } from "@/lib/constants";
 import { DEMO_ORG_ID, demoStandup, demoQueue, demoActivity, demoContacts } from "@/lib/demo-data";
 
 const statusIcons = ACTIVITY_STATUS_ICONS;
@@ -231,7 +231,7 @@ const OverviewView = () => {
                       className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-secondary/30 transition-colors">
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-foreground">{item.contact_name}</p>
-                        <p className="text-[10px] text-muted-foreground">{item.angle.replace(/_/g, " ")} · {item.channel} · Touch {item.touch_index + 1}</p>
+                        <p className="text-[10px] text-muted-foreground inline-flex items-center gap-1">{item.angle.replace(/_/g, " ")} · {(() => { const cfg = CHANNEL_CONFIG[item.channel]; if (cfg) { const Icon = cfg.icon; return <Icon className={cn("w-3 h-3 inline", cfg.color)} />; } return item.channel; })()} · Touch {item.touch_index + 1}</p>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         {!isExpanded && (
