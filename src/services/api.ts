@@ -2,6 +2,7 @@ const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
 const AUTH_TOKEN_KEY = "sb-access-token";
 const AUTH_REFRESH_KEY = "sb-refresh-token";
+const DEMO_ORG_ID = "demo-org-00000000";
 
 export function setAuthToken(token: string, refreshToken?: string) {
   localStorage.setItem(AUTH_TOKEN_KEY, token);
@@ -17,7 +18,56 @@ export function clearAuthToken() {
   localStorage.removeItem(AUTH_REFRESH_KEY);
 }
 
+function isDemoMode(): boolean {
+  const orgId = localStorage.getItem("vaigence_org_id");
+  return orgId === DEMO_ORG_ID || !getAuthToken();
+}
+
+// Demo-mode mock responses for write operations
+function demoMock<T>(path: string, method?: string): T | null {
+  if (!isDemoMode()) return null;
+  if (!method || method === "GET") return null; // Let GETs go through (they have their own fallbacks)
+
+  // Return mock success for all write operations in demo mode
+  if (path.includes("/approve")) return { status: "approved" } as T;
+  if (path.includes("/reject")) return { status: "rejected" } as T;
+  if (path.includes("/edit")) return { status: "updated" } as T;
+  if (path.includes("/scan")) return { status: "ok", touches_drafted: 2 } as T;
+  if (path.includes("/pause")) return { status: "paused" } as T;
+  if (path.includes("/resume")) return { status: "resumed" } as T;
+  if (path.includes("/rollback")) return { status: "rolled_back" } as T;
+  if (path.includes("/note")) return { status: "ok" } as T;
+  if (path.includes("/tag")) return { tags: [] } as T;
+  if (path.includes("/import")) return { imported: 1 } as T;
+  if (path.includes("/connect")) return { status: "connected" } as T;
+  if (path.includes("/disconnect")) return { status: "disconnected" } as T;
+  if (path.includes("/resolve")) return { status: "resolved" } as T;
+  if (path.includes("/upgrade") || path.includes("/billing")) return { status: "ok" } as T;
+  if (path.includes("/fetch-url")) return { content: "Demo content from URL.", source: "url" } as T;
+  if (path.includes("/teammate/chat")) return {
+    response: "Got it! In demo mode, I can't make real changes, but in production I'd update your teammate's configuration based on your instructions. Try the live version to see this in action.",
+    changes: [],
+    flowPreview: null,
+  } as T;
+  if (path.includes("/teammate")) return { status: "ok" } as T;
+  if (path.includes("/sequences")) return { id: "demo-seq", status: "ok" } as T;
+  if (path.includes("/knowledge") && method === "DELETE") return { status: "deleted" } as T;
+  if (path.includes("/knowledge")) return { id: "demo-kb", status: "ok" } as T;
+  if (path.includes("/contacts") && method === "DELETE") return { status: "deleted" } as T;
+  if (path.includes("/contacts") && method === "PUT") return { status: "updated" } as T;
+  if (path.includes("/workflow-config")) return { status: "ok" } as T;
+
+  // Fallback for any other write
+  return { status: "ok" } as T;
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const method = options?.method?.toUpperCase();
+
+  // In demo mode, mock all write operations
+  const mock = demoMock<T>(path, method);
+  if (mock !== null) return mock;
+
   const token = getAuthToken();
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -90,10 +140,69 @@ export function fetchTeammate(orgId: string): Promise<Teammate> {
   return request(`/api/teammate?org_id=${orgId}`);
 }
 
-export function chatWithTeammate(orgId: string, message: string): Promise<{ response: string }> {
+// --- Chat with Teammate (Conversational Config) ---
+
+export interface TouchPreview {
+  index: number;
+  day_offset: number;
+  angle: string;
+  channel_tier: string;
+  channel_resolved: string;
+}
+
+export interface SequencePreview {
+  template_key: string;
+  name: string;
+  active: boolean;
+  touches: TouchPreview[];
+}
+
+export interface OverridePreview {
+  scope_type: string;
+  scope_id: string;
+  persona_additions: string;
+  instruction_additions: string;
+}
+
+export interface FlowPreview {
+  teammate: {
+    goal: string;
+    primary_channel: string;
+    secondary_channel: string | null;
+    tertiary_channel: string | null;
+    status: string;
+  };
+  sequences: SequencePreview[];
+  guardrails: string[];
+  voice_examples: string[];
+  overrides: OverridePreview[];
+  escalation_contact: { name: string; email: string; phone?: string } | null;
+}
+
+export interface ConfigChange {
+  type: string;
+  label: string;
+  detail: string;
+  before?: string;
+  after?: string;
+  revision_id?: string;
+}
+
+export interface ChatResult {
+  response: string;
+  changes: ConfigChange[];
+  flowPreview: FlowPreview | null;
+}
+
+export interface ChatHistoryMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export function chatWithTeammate(orgId: string, message: string, history?: ChatHistoryMessage[]): Promise<ChatResult> {
   return request("/api/teammate/chat", {
     method: "POST",
-    body: JSON.stringify({ org_id: orgId, message }),
+    body: JSON.stringify({ org_id: orgId, message, history: history || [] }),
   });
 }
 
