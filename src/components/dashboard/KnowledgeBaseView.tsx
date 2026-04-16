@@ -34,8 +34,9 @@ const KnowledgeBaseView = () => {
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/api/knowledge?org_id=${orgId}`);
-      setItems(await res.json());
-    } catch (err) { toast.error("Failed to load knowledge base"); } finally { setLoading(false); }
+      const data = await res.json();
+      setItems(Array.isArray(data) ? data : []);
+    } catch (err) { /* API unreachable — show empty state */ } finally { setLoading(false); }
   };
 
   useEffect(() => { load(); }, [orgId]);

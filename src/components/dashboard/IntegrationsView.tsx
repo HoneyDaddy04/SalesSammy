@@ -91,8 +91,9 @@ const IntegrationsView = () => {
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/api/integrations?org_id=${orgId}`);
-      setDbIntegrations(await res.json());
-    } catch (err) { toast.error("Failed to load integrations"); } finally { setLoading(false); }
+      const data = await res.json();
+      setDbIntegrations(Array.isArray(data) ? data : []);
+    } catch (err) { /* API unreachable — show empty state */ } finally { setLoading(false); }
   };
 
   useEffect(() => { loadIntegrations(); }, [orgId]);
