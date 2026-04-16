@@ -69,15 +69,15 @@ for (const route of routes) {
 // Test specific interactions
 test("Landing page nav links work", async ({ page }) => {
   await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
-  await expect(page.locator("text=Sales Sammy")).toBeVisible();
-  await expect(page.locator("text=Get Started")).toBeVisible();
+  await expect(page.getByRole("navigation").getByText("Sales Sammy")).toBeVisible();
+  await expect(page.locator("text=Get Started").first()).toBeVisible();
 });
 
 test("Login demo button navigates to dashboard", async ({ page }) => {
   await page.goto(`${BASE}/login`, { waitUntil: "networkidle" });
   await expect(page.locator("text=Welcome back")).toBeVisible();
   await page.click("text=Try Demo Dashboard");
-  await page.waitForURL("**/dashboard/**", { timeout: 10000 });
+  await page.waitForURL("**/dashboard**", { timeout: 10000 });
   // Should see dashboard content
   await page.waitForTimeout(2000);
   const body = await page.locator("body").innerText();
@@ -88,18 +88,18 @@ test("Dashboard overview shows demo data", async ({ page }) => {
   // Set demo org ID
   await page.goto(`${BASE}/login`, { waitUntil: "networkidle" });
   await page.click("text=Try Demo Dashboard");
-  await page.waitForURL("**/dashboard/**", { timeout: 10000 });
+  await page.waitForURL("**/dashboard**", { timeout: 10000 });
   await page.waitForTimeout(2000);
 
   // Should have stat cards with non-zero values
   await expect(page.locator("text=Touches Sent")).toBeVisible();
-  await expect(page.locator("text=Sales Sammy")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sales Sammy" })).toBeVisible();
 });
 
 test("Dashboard leads shows contacts and click works", async ({ page }) => {
   await page.goto(`${BASE}/login`, { waitUntil: "networkidle" });
   await page.click("text=Try Demo Dashboard");
-  await page.waitForURL("**/dashboard/**", { timeout: 10000 });
+  await page.waitForURL("**/dashboard**", { timeout: 10000 });
 
   // Navigate to leads
   await page.goto(`${BASE}/dashboard/leads`, { waitUntil: "networkidle" });
@@ -114,21 +114,21 @@ test("Dashboard leads shows contacts and click works", async ({ page }) => {
 
   // Should see contact detail view
   await expect(page.locator("text=Back to leads")).toBeVisible();
-  await expect(page.locator("text=Finova Technologies")).toBeVisible();
+  await expect(page.locator("text=Finova Technologies").first()).toBeVisible();
 });
 
 test("Dashboard messages shows pending approvals", async ({ page }) => {
   await page.goto(`${BASE}/login`, { waitUntil: "networkidle" });
   await page.click("text=Try Demo Dashboard");
-  await page.waitForURL("**/dashboard/**", { timeout: 10000 });
+  await page.waitForURL("**/dashboard**", { timeout: 10000 });
 
   await page.goto(`${BASE}/dashboard/messages`, { waitUntil: "networkidle" });
   await page.waitForTimeout(2000);
 
-  await expect(page.locator("text=Messages")).toBeVisible();
-  await expect(page.locator("text=Pending")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Messages" })).toBeVisible();
+  await expect(page.locator("text=Pending").first()).toBeVisible();
   // Should have demo messages
-  await expect(page.locator("text=Adaeze Okonkwo")).toBeVisible();
+  await expect(page.locator("text=Adaeze Okonkwo").first()).toBeVisible();
 });
 
 test("Onboarding can navigate through all steps", async ({ page }) => {
