@@ -49,13 +49,56 @@ const ContactDetailView = ({ contactId, onBack, onRefresh }: ContactDetailViewPr
   const buildDemoDetail = () => {
     const c = demoContacts.find(c => c.id === contactId);
     if (!c) return null;
+
+    const firstName = c.name.split(" ")[0];
+    const channels: string[] = (() => { try { return JSON.parse(c.available_channels || "[]"); } catch { return ["email"]; } })();
+    const primaryChannel = channels[0] || "email";
+    const secondaryChannel = channels[1] || "whatsapp";
+
+    // Build realistic conversation timeline
+    const timeline: any[] = [];
+    const now = Date.now();
+
+    if (c.touch_index >= 1) {
+      timeline.push({
+        type: "touch", channel: primaryChannel, angle: "trigger_event", touch_index: 0,
+        drafted_content: `Hey ${firstName}, saw some exciting things happening at ${c.company}. We help teams like yours make sure every lead gets consistent, personalized follow-up without hiring more people. Worth a quick chat?`,
+        status: "sent", sent_at: new Date(now - 7 * 86400000).toISOString(),
+      });
+    }
+    if (c.touch_index >= 2) {
+      timeline.push({
+        type: "touch", channel: secondaryChannel, angle: "value_add", touch_index: 1,
+        drafted_content: `Hi ${firstName}, following up on my last message. We put together a quick guide on how teams at ${c.company}'s stage typically handle follow-up at scale. Happy to share if you're interested.`,
+        status: "sent", sent_at: new Date(now - 4 * 86400000).toISOString(),
+      });
+    }
+    if (c.status === "replied" || c.status === "converted") {
+      timeline.push({
+        type: "reply", channel: primaryChannel, classification: c.status === "converted" ? "positive" : "question",
+        content: c.status === "converted"
+          ? `Hi! Yes, we'd love to learn more. Can you set up a call with our team this week?`
+          : `Interesting. What's the pricing look like for a team of about ${Math.floor(Math.random() * 15 + 5)} people?`,
+        created_at: new Date(now - 3 * 86400000).toISOString(),
+      });
+    }
+    if (c.touch_index >= 3) {
+      timeline.push({
+        type: "touch", channel: primaryChannel, angle: "different_angle", touch_index: 2,
+        drafted_content: `${firstName}, not trying to be pushy. Just wanted to share that we helped a similar company in ${c.industry || "your space"} go from 15% reply rate to 40% in the first month. If the timing isn't right, totally understand.`,
+        status: c.touch_index > 3 ? "sent" : "pending_approval", sent_at: c.touch_index > 3 ? new Date(now - 1 * 86400000).toISOString() : undefined,
+      });
+    }
+
     return {
       contact: c,
+      timeline,
       touchStats: { total_touches: c.touch_index + 1, sent: c.touch_index, pending: 1 },
       replyStats: { total_replies: c.status === "replied" ? 2 : c.status === "converted" ? 3 : 0, positive: c.status === "converted" ? 2 : c.status === "replied" ? 1 : 0, questions: 1, objections: 0 },
       activity: [
-        { id: "da-1", action: `Drafted message for ${c.name}`, detail: `Touch ${c.touch_index + 1} of ${c.sequence_name}`, status: "success", created_at: c.updated_at },
-        ...(c.touch_index > 0 ? [{ id: "da-2", action: `Sent follow-up to ${c.name}`, detail: `Via ${c.available_channels.split(",")[0]}`, status: "success", created_at: c.last_touch_at || c.created_at }] : []),
+        { id: "da-1", action: `Drafted message for ${c.name}`, detail: `Touch ${c.touch_index + 1} of ${c.sequence_name}`, status: "pending", created_at: c.updated_at },
+        ...(c.touch_index > 0 ? [{ id: "da-2", action: `Sent follow-up to ${c.name}`, detail: `Touch ${c.touch_index} via ${primaryChannel}`, status: "success", created_at: c.last_touch_at || c.created_at }] : []),
+        ...(c.status === "replied" ? [{ id: "da-r", action: `${c.name} replied`, detail: `Classified as ${c.status === "converted" ? "positive" : "question"}`, status: "success", created_at: new Date(now - 3 * 86400000).toISOString() }] : []),
         { id: "da-3", action: `Researched ${c.company}`, detail: "Company info, role, recent activity", status: "info", created_at: c.created_at },
       ],
     };
@@ -68,7 +111,7 @@ const ContactDetailView = ({ contactId, onBack, onRefresh }: ContactDetailViewPr
       const demo = buildDemoDetail();
       if (demo) {
         setDetail(demo);
-        setThread({ contact: demo.contact, timeline: [] });
+        setThread({ contact: demo.contact, timeline: demo.timeline || [] });
       }
       setLoading(false);
       return;
@@ -91,7 +134,7 @@ const ContactDetailView = ({ contactId, onBack, onRefresh }: ContactDetailViewPr
       const demo = buildDemoDetail();
       if (demo) {
         setDetail(demo);
-        setThread({ contact: demo.contact, timeline: [] });
+        setThread({ contact: demo.contact, timeline: demo.timeline || [] });
       } else {
         toast.error("Failed to load contact details");
       }
