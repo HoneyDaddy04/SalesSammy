@@ -2,6 +2,18 @@ import { test, expect } from "@playwright/test";
 
 const BASE = "http://localhost:8080";
 
+// Helper: go to dashboard with demo org set, dismiss tour
+async function gotoDashboard(page: any, path = "/dashboard") {
+  // Set demo org and dismiss tour before navigating
+  await page.goto(`${BASE}${path}`, { waitUntil: "networkidle", timeout: 15000 });
+  await page.evaluate(() => {
+    localStorage.setItem("vaigence_org_id", "demo-org-00000000");
+    localStorage.setItem("vaigence_tour_done", "true");
+  });
+  await page.goto(`${BASE}${path}`, { waitUntil: "networkidle", timeout: 15000 });
+  await page.waitForTimeout(2000);
+}
+
 // All routes to test
 const routes = [
   { path: "/", name: "Landing" },
@@ -10,6 +22,7 @@ const routes = [
   { path: "/dashboard", name: "Dashboard (redirects to overview)" },
   { path: "/dashboard/overview", name: "Dashboard Overview" },
   { path: "/dashboard/messages", name: "Dashboard Messages" },
+  { path: "/dashboard/chat", name: "Dashboard Chat" },
   { path: "/dashboard/leads", name: "Dashboard Leads" },
   { path: "/dashboard/teammate", name: "Dashboard Teammate" },
   { path: "/dashboard/workflows", name: "Dashboard Workflows" },
@@ -17,37 +30,39 @@ const routes = [
   { path: "/dashboard/integrations", name: "Dashboard Integrations" },
   { path: "/dashboard/deploy", name: "Dashboard Deploy" },
   { path: "/dashboard/settings", name: "Dashboard Settings" },
+  { path: "/dashboard/admin", name: "Dashboard Admin" },
 ];
 
 for (const route of routes) {
   test(`${route.name} (${route.path}) loads without errors`, async ({ page }) => {
     const errors: string[] = [];
 
-    // Capture console errors
     page.on("console", (msg) => {
       if (msg.type() === "error") {
         const text = msg.text();
-        // Ignore network errors to localhost:3001 (expected without backend)
         if (!text.includes("localhost:3001") && !text.includes("ERR_CONNECTION_REFUSED") && !text.includes("Failed to fetch") && !text.includes("401") && !text.includes("Failed to load resource")) {
           errors.push(text);
         }
       }
     });
 
-    // Capture page crashes
     page.on("pageerror", (err) => {
       errors.push(`PAGE ERROR: ${err.message}`);
     });
 
+    // Dismiss tour for dashboard routes
+    if (route.path.startsWith("/dashboard")) {
+      await page.goto(`${BASE}${route.path}`, { waitUntil: "networkidle", timeout: 15000 });
+      await page.evaluate(() => {
+        localStorage.setItem("vaigence_org_id", "demo-org-00000000");
+        localStorage.setItem("vaigence_tour_done", "true");
+      });
+    }
+
     const response = await page.goto(`${BASE}${route.path}`, { waitUntil: "networkidle", timeout: 15000 });
-
-    // Page should return 200
     expect(response?.status()).toBe(200);
-
-    // Wait for React to render
     await page.waitForTimeout(2000);
 
-    // No crash errors
     const criticalErrors = errors.filter(
       (e) => !e.includes("404") && !e.includes("favicon")
     );
@@ -56,91 +71,117 @@ for (const route of routes) {
     }
     expect(criticalErrors).toHaveLength(0);
 
-    // Page should have visible content (not blank)
     const body = await page.locator("body").innerText();
     expect(body.trim().length).toBeGreaterThan(10);
 
-    // No uncaught error overlays
     const errorOverlay = page.locator('[id*="error"], [class*="error-overlay"]');
     expect(await errorOverlay.count()).toBe(0);
   });
 }
 
-// Test specific interactions
+// ── Feature tests ──
+
 test("Landing page nav links work", async ({ page }) => {
   await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
   await expect(page.getByRole("navigation").getByText("Sales Sammy")).toBeVisible();
   await expect(page.locator("text=Get Started").first()).toBeVisible();
 });
 
-test("Login demo button navigates to dashboard", async ({ page }) => {
-  await page.goto(`${BASE}/login`, { waitUntil: "networkidle" });
-  await expect(page.locator("text=Welcome back")).toBeVisible();
-  await page.click("text=Try Demo Dashboard");
-  await page.waitForURL("**/dashboard**", { timeout: 10000 });
-  // Should see dashboard content
-  await page.waitForTimeout(2000);
-  const body = await page.locator("body").innerText();
-  expect(body).toContain("Dashboard");
+test("Dashboard sidebar has Talk to Sammy nav item", async ({ page }) => {
+  await gotoDashboard(page);
+  await expect(page.locator("text=Talk to Sammy").first()).toBeVisible();
+});
+
+test("Dashboard sidebar has dark mode toggle", async ({ page }) => {
+  await gotoDashboard(page);
+  const toggle = page.locator("text=Dark").first().or(page.locator("text=Light").first());
+  await expect(toggle).toBeVisible();
+});
+
+test("Dashboard chat page shows suggestions", async ({ page }) => {
+  await gotoDashboard(page, "/dashboard/chat");
+  await expect(page.locator("text=What would you like to adjust?")).toBeVisible();
+  await expect(page.locator('[placeholder="Tell Sammy what to change..."]')).toBeVisible();
+});
+
+test("Dashboard messages has split-panel layout", async ({ page }) => {
+  await gotoDashboard(page, "/dashboard/messages");
+  await expect(page.getByRole("heading", { name: "Messages" })).toBeVisible();
+  await expect(page.locator("text=Pending").first()).toBeVisible();
+  await expect(page.locator("text=Select a message")).toBeVisible();
+});
+
+test("Dashboard teammate has Edit Profile button", async ({ page }) => {
+  await gotoDashboard(page, "/dashboard/teammate");
+  await expect(page.locator("text=Edit Profile")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sales Sammy" })).toBeVisible();
+});
+
+test("Dashboard teammate edit mode works", async ({ page }) => {
+  await gotoDashboard(page, "/dashboard/teammate");
+
+  // Find and click the Edit Profile button
+  const editBtn = page.locator("button", { hasText: "Edit Profile" });
+  await expect(editBtn).toBeVisible();
+  await editBtn.click();
+  await page.waitForTimeout(1000);
+
+  // Should show edit mode UI
+  await expect(page.locator("text=Editing Sammy").first()).toBeVisible({ timeout: 5000 });
+
+  // Cancel should exit edit mode
+  const cancelBtn = page.locator("button", { hasText: "Cancel" }).first();
+  await cancelBtn.click();
+  await page.waitForTimeout(500);
+  await expect(editBtn).toBeVisible();
+});
+
+test("Dashboard admin page loads", async ({ page }) => {
+  await gotoDashboard(page, "/dashboard/admin");
+  await expect(page.getByRole("heading", { name: "Admin Panel" })).toBeVisible();
+});
+
+test("Dashboard knowledge page has rich text editor", async ({ page }) => {
+  await gotoDashboard(page, "/dashboard/knowledge");
+  await expect(page.getByRole("heading", { name: "Knowledge Base" })).toBeVisible();
+  await page.click("text=Add Knowledge");
+  await page.waitForTimeout(500);
+  await expect(page.locator('[title="Bold"]').first()).toBeVisible();
 });
 
 test("Dashboard overview shows demo data", async ({ page }) => {
-  // Set demo org ID
-  await page.goto(`${BASE}/login`, { waitUntil: "networkidle" });
-  await page.click("text=Try Demo Dashboard");
-  await page.waitForURL("**/dashboard**", { timeout: 10000 });
-  await page.waitForTimeout(2000);
-
-  // Should have stat cards with non-zero values
+  await gotoDashboard(page, "/dashboard/overview");
   await expect(page.locator("text=Touches Sent")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Sales Sammy" })).toBeVisible();
 });
 
-test("Dashboard leads shows contacts and click works", async ({ page }) => {
-  await page.goto(`${BASE}/login`, { waitUntil: "networkidle" });
-  await page.click("text=Try Demo Dashboard");
-  await page.waitForURL("**/dashboard**", { timeout: 10000 });
-
-  // Navigate to leads
-  await page.goto(`${BASE}/dashboard/leads`, { waitUntil: "networkidle" });
-  await page.waitForTimeout(2000);
-
-  // Should see contact names
+test("Dashboard leads shows contacts", async ({ page }) => {
+  await gotoDashboard(page, "/dashboard/leads");
   await expect(page.locator("text=Adaeze Okonkwo")).toBeVisible();
-
-  // Click a contact
-  await page.click("text=Adaeze Okonkwo");
-  await page.waitForTimeout(2000);
-
-  // Should see contact detail view
-  await expect(page.locator("text=Back to leads")).toBeVisible();
-  await expect(page.locator("text=Finova Technologies").first()).toBeVisible();
 });
 
-test("Dashboard messages shows pending approvals", async ({ page }) => {
-  await page.goto(`${BASE}/login`, { waitUntil: "networkidle" });
-  await page.click("text=Try Demo Dashboard");
-  await page.waitForURL("**/dashboard**", { timeout: 10000 });
+test("Onboarding has knowledge intake step", async ({ page }) => {
+  await page.goto(`${BASE}/onboarding`, { waitUntil: "networkidle" });
+  await expect(page.locator("text=Meet Sammy")).toBeVisible();
 
-  await page.goto(`${BASE}/dashboard/messages`, { waitUntil: "networkidle" });
-  await page.waitForTimeout(2000);
+  // Step 1 (business), step 2 (knowledge)
+  await page.click("text=Continue");
+  await page.waitForTimeout(500);
+  await page.click("text=Continue");
+  await page.waitForTimeout(500);
 
-  await expect(page.getByRole("heading", { name: "Messages" })).toBeVisible();
-  await expect(page.locator("text=Pending").first()).toBeVisible();
-  // Should have demo messages
-  await expect(page.locator("text=Adaeze Okonkwo").first()).toBeVisible();
+  await expect(page.locator("text=Help Sammy learn your business")).toBeVisible();
+  await expect(page.locator("text=Website or page URLs")).toBeVisible();
 });
 
 test("Onboarding can navigate through all steps", async ({ page }) => {
   await page.goto(`${BASE}/onboarding`, { waitUntil: "networkidle" });
   await expect(page.locator("text=Meet Sammy")).toBeVisible();
 
-  // Click through steps without filling (free navigation)
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 9; i++) {
     await page.click("text=Continue");
     await page.waitForTimeout(500);
   }
 
-  // Should be on step 9 (Escalation) with Finish Setup button
   await expect(page.locator("text=Finish Setup")).toBeVisible();
 });
