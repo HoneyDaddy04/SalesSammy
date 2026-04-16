@@ -76,11 +76,16 @@ const ContactDetailView = ({ contactId, onBack, onRefresh }: ContactDetailViewPr
 
     try {
       const [detailRes, threadRes] = await Promise.all([
-        fetch(`${API_BASE}/api/contacts/${contactId}`).then(r => r.json()),
-        fetch(`${API_BASE}/api/contacts/${contactId}/thread`).then(r => r.json()),
+        fetch(`${API_BASE}/api/contacts/${contactId}`).then(r => r.json()).catch(() => null),
+        fetch(`${API_BASE}/api/contacts/${contactId}/thread`).then(r => r.json()).catch(() => null),
       ]);
-      setDetail(detailRes);
-      setThread(threadRes);
+      // Validate response has expected shape
+      if (detailRes?.contact) {
+        setDetail(detailRes);
+        setThread(threadRes);
+      } else {
+        throw new Error("Invalid response");
+      }
     } catch (err) {
       // Fallback to demo data
       const demo = buildDemoDetail();

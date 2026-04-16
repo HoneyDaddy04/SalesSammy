@@ -90,7 +90,7 @@ const ThreadsView = () => {
       if (search) params.set("search", search);
       const res = await fetch(`${API_BASE}/api/contacts?${params.toString()}`);
       const data = await res.json();
-      setContacts(data.length ? data : demoContacts as Contact[]);
+      setContacts(Array.isArray(data) && data.length ? data : demoContacts as Contact[]);
     } catch (err) { setContacts(demoContacts as Contact[]); } finally { setLoading(false); }
   };
 
