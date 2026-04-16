@@ -34,6 +34,7 @@ import jobsRouter from "./routes/jobs.js";
 import contextOverridesRouter from "./routes/context-overrides.js";
 import approvalsRouter from "./routes/approvals.js";
 import repliesRouter from "./routes/replies.js";
+import adminRouter from "./routes/admin.js";
 
 async function start() {
   await getDb();
@@ -100,6 +101,9 @@ async function start() {
   app.use("/api/context-overrides", requireAuth, contextOverridesRouter);
   app.use("/api/approvals", requireAuth, approvalsRouter);
   app.use("/api/replies", requireAuth, repliesRouter);
+
+  // Admin routes (TODO: add admin-specific auth middleware)
+  app.use("/api/admin", requireAuth, adminRouter);
 
   app.listen(config.port, () => {
     console.log(`Vaigence API running on http://localhost:${config.port}`);

@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import RichTextEditor from "@/components/ui/rich-text-editor";
 
 import { API_BASE, ORG_KEY } from "@/lib/constants";
 
@@ -158,9 +159,13 @@ const KnowledgeBaseView = () => {
             {addMode === "text" && (
               <div>
                 <Label className="text-xs">Content</Label>
-                <textarea value={newContent} onChange={(e) => setNewContent(e.target.value)}
-                  placeholder="Write or paste the information Sammy should know. Be specific. Example: 'Our Pro plan costs $79/month and includes up to 15 users, unlimited projects, and priority support.'"
-                  rows={5} className="w-full mt-1 bg-secondary rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none resize-none" />
+                <div className="mt-1">
+                  <RichTextEditor
+                    content={newContent}
+                    onChange={setNewContent}
+                    placeholder="Write or paste the information Sammy should know. Be specific. Example: 'Our Pro plan costs $79/month and includes up to 15 users, unlimited projects, and priority support.'"
+                  />
+                </div>
               </div>
             )}
 
@@ -279,11 +284,10 @@ const KnowledgeBaseView = () => {
               {isEditing ? (
                 <div className="space-y-2">
                   <Input value={editSource} onChange={(e) => setEditSource(e.target.value)} className="h-8 text-sm" placeholder="Source label" />
-                  <textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} rows={4}
-                    className="w-full bg-secondary rounded-lg px-3 py-2 text-sm text-foreground outline-none resize-none" />
+                  <RichTextEditor content={editContent} onChange={setEditContent} />
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground leading-relaxed">{item.content}</p>
+                <div className="text-sm text-muted-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: item.content }} />
               )}
             </motion.div>
           );

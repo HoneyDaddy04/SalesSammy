@@ -204,71 +204,21 @@ router.get("/workflow-config", async (req, res) => {
   }
 });
 
-/** POST /api/teammate/chat - chat-based adjustment interface */
+/** POST /api/teammate/chat - conversational config interface */
 router.post("/chat", async (req, res) => {
-  const { org_id, message } = req.body;
+  const { org_id, message, history } = req.body;
   if (!org_id || !message) {
     res.status(400).json({ error: "org_id and message required" });
     return;
   }
 
-  const teammate = await queryOne(`SELECT * FROM teammate WHERE org_id = ?`, [org_id]);
-  if (!teammate) {
-    res.status(404).json({ error: "No teammate configured" });
-    return;
+  try {
+    const { handleConfigChat } = await import("../services/config-chat.js");
+    const result = await handleConfigChat(org_id, message, history || []);
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
-
-  const currentInstructions = (teammate.operating_instructions as string) || "";
-
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 500,
-    system: `You are the user's AI follow-up teammate. They're adjusting how you work via chat.
-
-Your current operating instructions:
-${currentInstructions || "(none yet)"}
-
-Your persona:
-${teammate.persona_prompt}
-
-When the user gives you an adjustment (tone, content, timing, channels, guardrails, etc.):
-1. Confirm you understood in 1-2 sentences
-2. If the adjustment is a new rule, output it on a new line prefixed with "INSTRUCTION:" so it can be saved
-3. Show a before/after if relevant
-
-When the user asks a question about how you work, answer briefly.
-
-Keep it conversational. No bullet points or markdown.`,
-    messages: [{ role: "user", content: message }],
-  });
-
-  const responseText = (response.content[0] as Anthropic.TextBlock).text;
-
-  // Extract any new instructions
-  const instructionLines = responseText
-    .split("\n")
-    .filter((line) => line.startsWith("INSTRUCTION:"))
-    .map((line) => line.replace("INSTRUCTION:", "").trim());
-
-  if (instructionLines.length > 0) {
-    // Snapshot before chat-based update (config versioning)
-    snapshotBeforeUpdate(org_id, "teammate", teammate.id as string, teammate as any,
-      `Chat adjustment: ${message.substring(0, 80)}`, "chat");
-
-    const updated = currentInstructions
-      ? currentInstructions + "\n" + instructionLines.join("\n")
-      : instructionLines.join("\n");
-    await run(`UPDATE teammate SET operating_instructions = ? WHERE id = ?`, [updated, teammate.id]);
-  }
-
-  // Clean response (remove INSTRUCTION: lines from what user sees)
-  const cleanResponse = responseText
-    .split("\n")
-    .filter((line) => !line.startsWith("INSTRUCTION:"))
-    .join("\n")
-    .trim();
-
-  res.json({ response: cleanResponse });
 });
 
 export default router;

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, ArrowLeft, CheckCircle2, Building2, Users, Target, MessageSquare, Database, Mail, Mic, Shield, UserPlus, Loader2, Bot, Briefcase, AlertCircle } from "lucide-react";
+import { ArrowRight, ArrowLeft, CheckCircle2, Building2, Users, Target, MessageSquare, Database, Mail, Mic, Shield, UserPlus, Loader2, Bot, Briefcase, AlertCircle, Globe, Upload, FileText, Link2, X, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,14 +13,15 @@ import logo from "@/assets/branding/mark-dark.svg";
 const steps = [
   { id: "signup", label: "Sign Up", num: "01" },
   { id: "business", label: "Your Business", num: "02" },
-  { id: "audience", label: "Your Audience", num: "03" },
-  { id: "triggers", label: "Triggers & Goals", num: "04" },
-  { id: "sources", label: "Lead Sources", num: "05" },
-  { id: "channels", label: "Channels", num: "06" },
-  { id: "voice", label: "Your Voice", num: "07" },
-  { id: "guardrails", label: "Guardrails", num: "08" },
-  { id: "escalation", label: "Escalation", num: "09" },
-  { id: "review", label: "Review", num: "10" },
+  { id: "knowledge", label: "Help Sammy Learn", num: "03" },
+  { id: "audience", label: "Your Audience", num: "04" },
+  { id: "triggers", label: "Triggers & Goals", num: "05" },
+  { id: "sources", label: "Lead Sources", num: "06" },
+  { id: "channels", label: "Channels", num: "07" },
+  { id: "voice", label: "Your Voice", num: "08" },
+  { id: "guardrails", label: "Guardrails", num: "09" },
+  { id: "escalation", label: "Escalation", num: "10" },
+  { id: "review", label: "Review", num: "11" },
 ];
 
 const channelOptions = [
@@ -58,6 +59,12 @@ const Onboarding = () => {
   const [selectedChannels, setSelectedChannels] = useState<string[]>(["email"]);
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
 
+  // Knowledge intake
+  const [knowledgeUrls, setKnowledgeUrls] = useState<string[]>([]);
+  const [knowledgeFiles, setKnowledgeFiles] = useState<Array<{ name: string; content: string }>>([]);
+  const [urlInput, setUrlInput] = useState("");
+  const [urlFetching, setUrlFetching] = useState(false);
+
   // Prefill demo data
   useEffect(() => {
     if (!isDemo) return;
@@ -86,13 +93,14 @@ const Onboarding = () => {
     switch (s) {
       case 0: return company.trim().length > 0 && email.trim().length > 0 && password.trim().length >= 6;
       case 1: return answers.business_description.trim().length > 0;
-      case 2: return answers.target_audience.trim().length > 0;
-      case 3: return answers.lead_trigger_signals.trim().length > 0 && answers.goal.trim().length > 0;
-      case 4: return selectedSources.length > 0;
-      case 5: return selectedChannels.length > 0;
-      case 6: return answers.voice_examples.trim().length > 0;
-      case 7: return true; // guardrails optional
-      case 8: return true; // escalation optional
+      case 2: return true; // knowledge intake is optional
+      case 3: return answers.target_audience.trim().length > 0;
+      case 4: return answers.lead_trigger_signals.trim().length > 0 && answers.goal.trim().length > 0;
+      case 5: return selectedSources.length > 0;
+      case 6: return selectedChannels.length > 0;
+      case 7: return answers.voice_examples.trim().length > 0;
+      case 8: return true; // guardrails optional
+      case 9: return true; // escalation optional
       default: return true;
     }
   };
@@ -100,7 +108,7 @@ const Onboarding = () => {
   // Get all incomplete required steps
   const getIncompleteSteps = () => {
     const incomplete: number[] = [];
-    for (let i = 0; i <= 6; i++) {
+    for (let i = 0; i <= 7; i++) {
       if (!isStepComplete(i)) incomplete.push(i);
     }
     return incomplete;
@@ -122,7 +130,7 @@ const Onboarding = () => {
       localStorage.setItem(ORG_KEY, demoOrgId);
       setOrgId(demoOrgId);
       setSampleMessage(`Hey Sarah, saw you just brought on 3 new people at Acme Corp. Congrats! That's usually when task tracking starts breaking down.\n\nWe built FlowDesk specifically for that stage — one workspace instead of the spreadsheet and Slack chaos. Takes 10 min to set up, free trial, no commitment.\n\nWorth a quick look? Happy to do a 15-min walkthrough whenever works.\n\nBest,\nSammy`);
-      setStep(9);
+      setStep(10);
       setLoading(false);
       return;
     }
@@ -155,7 +163,33 @@ const Onboarding = () => {
       localStorage.setItem(ORG_KEY, oid);
       setOrgId(oid);
       setSampleMessage(lastRes?.sample_message || "");
-      setStep(9);
+
+      // Save knowledge intake items to knowledge base
+      for (const url of knowledgeUrls) {
+        try {
+          const fetchRes = await fetch(`${API_BASE}/api/knowledge/fetch-url`, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url }),
+          });
+          if (fetchRes.ok) {
+            const data = await fetchRes.json();
+            await fetch(`${API_BASE}/api/knowledge`, {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ org_id: oid, content: data.content, source: data.title || url }),
+            });
+          }
+        } catch { /* skip failed URLs */ }
+      }
+      for (const file of knowledgeFiles) {
+        try {
+          await fetch(`${API_BASE}/api/knowledge`, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ org_id: oid, content: file.content, source: file.name }),
+          });
+        } catch { /* skip failed files */ }
+      }
+
+      setStep(10);
     } catch (err) { console.error("Onboarding error:", err); }
     finally { setLoading(false); }
   };
@@ -165,7 +199,7 @@ const Onboarding = () => {
     navigate("/dashboard");
   };
 
-  const nextStep = () => { if (step === 8) handleFinish(); else if (step < 9) setStep(step + 1); };
+  const nextStep = () => { if (step === 9) handleFinish(); else if (step < 10) setStep(step + 1); };
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -179,19 +213,19 @@ const Onboarding = () => {
           {steps.map((s, i) => (
             <button
               key={s.id}
-              onClick={() => { if (i <= 9 && step !== 9) setStep(i); }}
-              disabled={step === 9}
+              onClick={() => { if (i <= 10 && step !== 10) setStep(i); }}
+              disabled={step === 10}
               className={cn(
                 "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all text-left",
                 i === step ? "bg-primary/10 text-primary font-medium" :
                   isStepComplete(i) ? "text-success hover:bg-secondary" :
-                  showValidation && i <= 6 && !isStepComplete(i) ? "text-destructive" :
+                  showValidation && i <= 7 && !isStepComplete(i) ? "text-destructive" :
                   "text-muted-foreground hover:bg-secondary",
-                step === 9 ? "cursor-default" : "cursor-pointer"
+                step === 10 ? "cursor-default" : "cursor-pointer"
               )}
             >
               {isStepComplete(i) && i !== step ? <CheckCircle2 className="w-4 h-4 text-success shrink-0" /> :
-                showValidation && i <= 6 && !isStepComplete(i) && i !== step ? <AlertCircle className="w-4 h-4 text-destructive shrink-0" /> :
+                showValidation && i <= 7 && !isStepComplete(i) && i !== step ? <AlertCircle className="w-4 h-4 text-destructive shrink-0" /> :
                 <span className={cn("w-5 h-5 rounded-full border-2 flex items-center justify-center text-[10px] font-bold shrink-0",
                   i === step ? "border-primary text-primary" : "border-muted-foreground/30")}>{s.num}</span>}
               {s.label}
@@ -200,9 +234,9 @@ const Onboarding = () => {
         </div>
         <div className="mt-auto pt-4">
           <div className="h-1.5 rounded-full bg-border overflow-hidden">
-            <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${(step / 9) * 100}%` }} />
+            <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${(step / 10) * 100}%` }} />
           </div>
-          <p className="text-[10px] text-muted-foreground mt-2">{Math.round((step / 9) * 100)}% complete</p>
+          <p className="text-[10px] text-muted-foreground mt-2">{Math.round((step / 10) * 100)}% complete</p>
         </div>
       </div>
 
@@ -236,6 +270,100 @@ const Onboarding = () => {
 
                 {step === 2 && (
                   <div className="space-y-6">
+                    <div>
+                      <h2 className="font-display text-2xl font-bold text-foreground">Help Sammy learn your business</h2>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        The more Sammy knows, the better the first messages. Add your website, docs, pricing pages — anything helpful.
+                        <span className="text-muted-foreground/60"> (Optional — you can add more later in Knowledge Base)</span>
+                      </p>
+                    </div>
+
+                    {/* URL input */}
+                    <div>
+                      <Label className="text-xs font-medium flex items-center gap-1.5"><Globe className="w-3.5 h-3.5" /> Website or page URLs</Label>
+                      <div className="flex items-center gap-2 mt-1.5">
+                        <Input value={urlInput} onChange={e => setUrlInput(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === "Enter" && urlInput.trim()) {
+                              e.preventDefault();
+                              setKnowledgeUrls(prev => [...prev, urlInput.trim()]);
+                              setUrlInput("");
+                            }
+                          }}
+                          placeholder="https://yoursite.com/pricing" className="flex-1" />
+                        <Button variant="outline" size="sm" onClick={() => {
+                          if (urlInput.trim()) {
+                            setKnowledgeUrls(prev => [...prev, urlInput.trim()]);
+                            setUrlInput("");
+                          }
+                        }} className="gap-1 text-xs shrink-0"><Plus className="w-3 h-3" /> Add</Button>
+                      </div>
+                      {knowledgeUrls.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {knowledgeUrls.map((url, i) => (
+                            <span key={i} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs">
+                              <Link2 className="w-3 h-3" />
+                              {url.length > 40 ? url.slice(0, 40) + "..." : url}
+                              <button onClick={() => setKnowledgeUrls(prev => prev.filter((_, j) => j !== i))} className="hover:text-destructive">
+                                <X className="w-3 h-3" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <p className="text-[10px] text-muted-foreground mt-1">Your website, pricing page, docs, product pages, FAQ — any public page</p>
+                    </div>
+
+                    {/* File upload */}
+                    <div>
+                      <Label className="text-xs font-medium flex items-center gap-1.5"><Upload className="w-3.5 h-3.5" /> Upload documents</Label>
+                      <div className="mt-1.5 border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/30 transition-colors cursor-pointer"
+                        onClick={() => document.getElementById("onboard-file-input")?.click()}>
+                        <Upload className="w-6 h-6 mx-auto mb-1.5 text-muted-foreground/40" />
+                        <p className="text-xs text-muted-foreground">Click to upload — pitch decks, product docs, pricing sheets</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">TXT, CSV, MD, DOCX (max 10MB each)</p>
+                        <input id="onboard-file-input" type="file" accept=".txt,.csv,.md,.doc,.docx" multiple className="hidden"
+                          onChange={(e) => {
+                            const files = Array.from(e.target.files || []);
+                            files.forEach(file => {
+                              const reader = new FileReader();
+                              reader.onload = (ev) => {
+                                setKnowledgeFiles(prev => [...prev, {
+                                  name: file.name.replace(/\.[^.]+$/, ""),
+                                  content: ev.target?.result as string || "",
+                                }]);
+                              };
+                              reader.readAsText(file);
+                            });
+                          }} />
+                      </div>
+                      {knowledgeFiles.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {knowledgeFiles.map((f, i) => (
+                            <span key={i} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-success/10 text-success text-xs">
+                              <FileText className="w-3 h-3" />
+                              {f.name}
+                              <button onClick={() => setKnowledgeFiles(prev => prev.filter((_, j) => j !== i))} className="hover:text-destructive">
+                                <X className="w-3 h-3" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {(knowledgeUrls.length > 0 || knowledgeFiles.length > 0) && (
+                      <div className="rounded-lg bg-success/5 border border-success/20 px-3 py-2">
+                        <p className="text-xs text-success font-medium">
+                          {knowledgeUrls.length + knowledgeFiles.length} source{knowledgeUrls.length + knowledgeFiles.length !== 1 ? "s" : ""} ready — Sammy will process these when setup completes
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {step === 3 && (
+                  <div className="space-y-6">
                     <div><h2 className="font-display text-2xl font-bold text-foreground">Who are you trying to reach?</h2><p className="text-sm text-muted-foreground mt-2">Role, industry, company size, whatever matters.</p></div>
                     <textarea value={answers.target_audience} onChange={e => updateAnswer("target_audience", e.target.value)}
                       placeholder="Founders and ops leads at companies with 5-30 people. Usually overwhelmed, juggling too many tools."
@@ -243,7 +371,7 @@ const Onboarding = () => {
                   </div>
                 )}
 
-                {step === 3 && (
+                {step === 4 && (
                   <div className="space-y-6">
                     <div><h2 className="font-display text-2xl font-bold text-foreground">Triggers & Goals</h2><p className="text-sm text-muted-foreground mt-2">The most important step. What signals say someone needs you now?</p></div>
                     <div className="space-y-4">
@@ -257,7 +385,7 @@ const Onboarding = () => {
                   </div>
                 )}
 
-                {step === 4 && (
+                {step === 5 && (
                   <div className="space-y-6">
                     <div><h2 className="font-display text-2xl font-bold text-foreground">Where do your leads live?</h2><p className="text-sm text-muted-foreground mt-2">Select where Sammy should pull contacts from.</p></div>
                     <div className="grid grid-cols-2 gap-3">
@@ -271,7 +399,7 @@ const Onboarding = () => {
                   </div>
                 )}
 
-                {step === 5 && (
+                {step === 6 && (
                   <div className="space-y-6">
                     <div><h2 className="font-display text-2xl font-bold text-foreground">Where do you message them?</h2><p className="text-sm text-muted-foreground mt-2">Sammy will follow up across these channels.</p></div>
                     <div className="grid grid-cols-2 gap-3">
@@ -284,7 +412,7 @@ const Onboarding = () => {
                   </div>
                 )}
 
-                {step === 6 && (
+                {step === 7 && (
                   <div className="space-y-6">
                     <div><h2 className="font-display text-2xl font-bold text-foreground">Your voice</h2><p className="text-sm text-muted-foreground mt-2">Paste 2-3 messages you've sent that got good responses. This is how Sammy learns to sound like you.</p></div>
                     <textarea value={answers.voice_examples} onChange={e => updateAnswer("voice_examples", e.target.value)}
@@ -293,7 +421,7 @@ const Onboarding = () => {
                   </div>
                 )}
 
-                {step === 7 && (
+                {step === 8 && (
                   <div className="space-y-6">
                     <div><h2 className="font-display text-2xl font-bold text-foreground">Anything off-limits?</h2><p className="text-sm text-muted-foreground mt-2">Things Sammy should never say or promise. <span className="text-muted-foreground/60">(Optional)</span></p></div>
                     <textarea value={answers.guardrails} onChange={e => updateAnswer("guardrails", e.target.value)}
@@ -302,7 +430,7 @@ const Onboarding = () => {
                   </div>
                 )}
 
-                {step === 8 && (
+                {step === 9 && (
                   <div className="space-y-6">
                     <div><h2 className="font-display text-2xl font-bold text-foreground">Who should Sammy escalate to?</h2><p className="text-sm text-muted-foreground mt-2">When a lead asks something beyond scope, who gets the ping? <span className="text-muted-foreground/60">(Optional)</span></p></div>
                     <textarea value={answers.escalation} onChange={e => updateAnswer("escalation", e.target.value)}
@@ -330,7 +458,7 @@ const Onboarding = () => {
                   </div>
                 )}
 
-                {step === 9 && (
+                {step === 10 && (
                   <div className="space-y-6">
                     <div><h2 className="font-display text-2xl font-bold text-foreground">Sammy is ready</h2><p className="text-sm text-muted-foreground mt-2">Here's a sample message. This is how they'll sound.</p></div>
                     <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
@@ -361,14 +489,14 @@ const Onboarding = () => {
         <div className="border-t border-border bg-card px-8 py-4 flex items-center justify-between">
           <Button variant="outline" onClick={() => setStep(Math.max(0, step - 1))} disabled={step === 0 || loading} className="gap-2"><ArrowLeft className="w-4 h-4" /> Back</Button>
           <div className="flex items-center gap-3">
-            {step < 9 && !isStepComplete(step) && step <= 6 && (
+            {step < 10 && !isStepComplete(step) && step <= 7 && (
               <span className="text-[10px] text-muted-foreground hidden sm:block">You can skip ahead and fill this later</span>
             )}
-            {step === 9 ? (
+            {step === 10 ? (
               <Button onClick={handleComplete} className="gap-2">Go to Dashboard <ArrowRight className="w-4 h-4" /></Button>
             ) : (
               <Button onClick={nextStep} disabled={loading} className="gap-2">
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null} {step === 8 ? "Finish Setup" : "Continue"} <ArrowRight className="w-4 h-4" />
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null} {step === 9 ? "Finish Setup" : "Continue"} <ArrowRight className="w-4 h-4" />
               </Button>
             )}
           </div>

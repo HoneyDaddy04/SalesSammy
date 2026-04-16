@@ -1,6 +1,11 @@
 import { useNavigate } from "react-router-dom";
-import { LayoutDashboard, Mail, Users, User, Workflow, Link2, Radio, Settings, LogOut, Home, BookOpen, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import {
+  LayoutDashboard, Mail, Users, User, Workflow, Link2, Radio, Settings,
+  LogOut, Home, BookOpen, PanelLeftClose, PanelLeftOpen, MessageCircle,
+  Sun, Moon, ShieldCheck,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/hooks/useTheme";
 import logo from "@/assets/branding/mark-dark.svg";
 import teammateAvatar from "@/assets/agent-sales.jpg";
 
@@ -16,6 +21,7 @@ interface SidebarProps {
 const navItems = [
   { id: "overview", label: "Dashboard", icon: LayoutDashboard, section: "daily" },
   { id: "messages", label: "Messages", icon: Mail, section: "daily", badge: true },
+  { id: "chat", label: "Talk to Sammy", icon: MessageCircle, section: "daily" },
   { id: "leads", label: "Leads", icon: Users, section: "daily" },
   { id: "teammate", label: "Sammy", icon: User, section: "manage" },
   { id: "workflows", label: "Workflows", icon: Workflow, section: "manage" },
@@ -23,10 +29,12 @@ const navItems = [
   { id: "integrations", label: "Integrations", icon: Link2, section: "manage" },
   { id: "deploy", label: "Deploy", icon: Radio, section: "manage" },
   { id: "settings", label: "Settings", icon: Settings, section: "settings" },
+  { id: "admin", label: "Admin", icon: ShieldCheck, section: "settings" },
 ];
 
 const Sidebar = ({ activeView, pendingMessages = 0, mobileOpen = false, onMobileClose, collapsed = false, onToggleCollapse }: SidebarProps) => {
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
 
   const dailyItems = navItems.filter(n => n.section === "daily");
   const manageItems = navItems.filter(n => n.section === "manage");
@@ -34,6 +42,7 @@ const Sidebar = ({ activeView, pendingMessages = 0, mobileOpen = false, onMobile
 
   const NavButton = ({ item }: { item: typeof navItems[0] }) => (
     <button
+      data-tour={`nav-${item.id}`}
       onClick={() => {
         navigate(`/dashboard/${item.id}`);
         onMobileClose?.();
@@ -91,6 +100,7 @@ const Sidebar = ({ activeView, pendingMessages = 0, mobileOpen = false, onMobile
         {/* Teammate Profile Card */}
         {!collapsed ? (
           <button
+            data-tour="teammate-card"
             onClick={() => { navigate("/dashboard/teammate"); onMobileClose?.(); }}
             className={cn(
               "mx-3 mt-3 rounded-xl p-3 flex items-center gap-3 transition-all duration-200 text-left min-h-[40px]",
@@ -106,6 +116,7 @@ const Sidebar = ({ activeView, pendingMessages = 0, mobileOpen = false, onMobile
           </button>
         ) : (
           <button
+            data-tour="teammate-card"
             onClick={() => { navigate("/dashboard/teammate"); onMobileClose?.(); }}
             title="Sales Sammy"
             className="mx-auto mt-3 relative"
@@ -133,7 +144,7 @@ const Sidebar = ({ activeView, pendingMessages = 0, mobileOpen = false, onMobile
         {/* Bottom */}
         <div className={cn("border-t border-border", collapsed ? "px-2 py-3" : "px-4 py-3 space-y-3")}>
           {!collapsed && (
-            <div className="rounded-lg bg-secondary p-3">
+            <div className="rounded-lg bg-secondary p-3" data-tour="shadow-mode">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-medium text-foreground">Shadow Mode</p>
                 <span className="text-[10px] text-primary bg-primary/10 px-2 py-0.5 rounded-full">Active</span>
@@ -146,6 +157,11 @@ const Sidebar = ({ activeView, pendingMessages = 0, mobileOpen = false, onMobile
             </div>
           )}
           <div className={cn("flex items-center", collapsed ? "flex-col gap-2" : "gap-2")}>
+            <button onClick={toggleTheme} title={theme === "dark" ? "Light mode" : "Dark mode"} className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors">
+              {theme === "dark" ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+              {!collapsed && (theme === "dark" ? "Light" : "Dark")}
+            </button>
+            {!collapsed && <span className="text-border">|</span>}
             <button onClick={() => navigate("/")} title="Home" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors">
               <Home className="w-3.5 h-3.5" /> {!collapsed && "Home"}
             </button>

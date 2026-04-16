@@ -32,3 +32,4 @@ server/.env
 *.db
 server/data/
 .vercel
+server/local.db*

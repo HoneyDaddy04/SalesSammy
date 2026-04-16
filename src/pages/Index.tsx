@@ -14,7 +14,9 @@ import IntegrationsView from "@/components/dashboard/IntegrationsView";
 import DeployView from "@/components/dashboard/DeployView";
 import KnowledgeBaseView from "@/components/dashboard/KnowledgeBaseView";
 import SettingsView from "@/components/dashboard/SettingsView";
-import { toast } from "sonner";
+import ChatView from "@/components/dashboard/ChatView";
+import AdminView from "@/components/dashboard/AdminView";
+import { useOnboardingTour } from "@/hooks/useOnboardingTour";
 import { API_BASE, ORG_KEY } from "@/lib/constants";
 
 // Map route segments to nav item IDs used by Sidebar
@@ -22,6 +24,7 @@ const routeToNavId: Record<string, string> = {
   "": "overview",
   overview: "overview",
   messages: "messages",
+  chat: "chat",
   leads: "leads",
   teammate: "teammate",
   workflows: "workflows",
@@ -29,6 +32,7 @@ const routeToNavId: Record<string, string> = {
   integrations: "integrations",
   deploy: "deploy",
   settings: "settings",
+  admin: "admin",
 };
 
 const Index = () => {
@@ -36,6 +40,9 @@ const Index = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const location = useLocation();
+
+  // Onboarding tour for first-time users
+  useOnboardingTour();
 
   // Derive active view from the URL
   const segment = location.pathname.replace(/^\/dashboard\/?/, "").split("/")[0];
@@ -88,6 +95,7 @@ const Index = () => {
           <Route index element={<OverviewView />} />
           <Route path="overview" element={<OverviewView />} />
           <Route path="messages" element={<MessagesView onCountUpdate={handleCountUpdate} />} />
+          <Route path="chat" element={<ChatView />} />
           <Route path="leads" element={<ThreadsView />} />
           <Route path="teammate" element={<TeammateDetailView />} />
           <Route path="workflows" element={<WorkflowsView />} />
@@ -95,6 +103,7 @@ const Index = () => {
           <Route path="integrations" element={<IntegrationsView />} />
           <Route path="deploy" element={<DeployView />} />
           <Route path="settings" element={<SettingsView />} />
+          <Route path="admin" element={<AdminView />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </main>
