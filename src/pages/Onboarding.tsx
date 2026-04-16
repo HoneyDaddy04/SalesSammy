@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, ArrowLeft, CheckCircle2, Building2, Users, Target, MessageSquare, Database, Mail, Mic, Shield, UserPlus, Loader2, Bot, Briefcase, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,8 @@ const sourceOptions = [
 
 const Onboarding = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isDemo = searchParams.get("demo") === "true";
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [orgId, setOrgId] = useState("");
@@ -55,6 +57,27 @@ const Onboarding = () => {
   });
   const [selectedChannels, setSelectedChannels] = useState<string[]>(["email"]);
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
+
+  // Prefill demo data
+  useEffect(() => {
+    if (!isDemo) return;
+    setName("Alex Okafor");
+    setEmail("alex@flowdesk.io");
+    setPassword("demo123456");
+    setCompany("FlowDesk");
+    setAnswers({
+      business_description: "FlowDesk is a project management tool for teams of 5-30. We replace the mess of spreadsheets, Slack threads, and sticky notes with one clean workspace. Plans start at $29/month.",
+      target_audience: "Founders and ops leads at startups and small businesses. Usually 5-30 people, overwhelmed by too many tools, losing track of who's doing what.",
+      lead_source_type: "Mix of inbound (site demos) and cold outreach (LinkedIn prospecting)",
+      lead_trigger_signals: "Recently raised funding, hired 3+ people in a month, posted on social media about project chaos or missed deadlines, visited our pricing page multiple times.",
+      goal: "Book a 15-minute demo call or start a free trial",
+      voice_examples: "Hey Sarah, saw you just brought on 3 new people. Congrats! That's usually when task tracking starts breaking. We built something for exactly that stage. Worth a quick look?\n\n---\n\nQuick one — noticed your team's growing fast. Most founders at your stage spend 5+ hours/week just keeping everyone aligned. We cut that to zero. Want me to show you how in 15 min?",
+      guardrails: "Never discuss competitor pricing\nDon't promise custom features or timelines\nDon't commit to delivery dates\nNever share other customer names",
+      escalation: "Alex Okafor, alex@flowdesk.io, email",
+    });
+    setSelectedChannels(["email", "whatsapp"]);
+    setSelectedSources(["csv", "sheets"]);
+  }, [isDemo]);
 
   const updateAnswer = (key: string, value: string) => setAnswers(prev => ({ ...prev, [key]: value }));
 
@@ -92,6 +115,18 @@ const Onboarding = () => {
     }
     setShowValidation(false);
     setLoading(true);
+
+    // Demo mode: skip API, show sample and go to review
+    if (isDemo) {
+      const demoOrgId = localStorage.getItem(ORG_KEY) || "demo-org-00000000";
+      localStorage.setItem(ORG_KEY, demoOrgId);
+      setOrgId(demoOrgId);
+      setSampleMessage(`Hey Sarah, saw you just brought on 3 new people at Acme Corp. Congrats! That's usually when task tracking starts breaking down.\n\nWe built FlowDesk specifically for that stage — one workspace instead of the spreadsheet and Slack chaos. Takes 10 min to set up, free trial, no commitment.\n\nWorth a quick look? Happy to do a 15-min walkthrough whenever works.\n\nBest,\nSammy`);
+      setStep(9);
+      setLoading(false);
+      return;
+    }
+
     try {
       // Sign up the user first
       const signupRes = await authSignup(email, password, name);

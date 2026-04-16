@@ -45,7 +45,7 @@ const Login = () => {
     setDemoLoading(true);
     await autoDetectOrg();
     setDemoLoading(false);
-    navigate("/dashboard");
+    navigate("/onboarding?demo=true");
   };
 
   const autoDetectOrg = async () => {
