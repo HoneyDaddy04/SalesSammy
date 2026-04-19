@@ -24,6 +24,7 @@ import contextOverridesRouter from "./routes/context-overrides.js";
 import approvalsRouter from "./routes/approvals.js";
 import repliesRouter from "./routes/replies.js";
 import adminRouter from "./routes/admin.js";
+import webhooksRouter from "./routes/webhooks.js";
 
 async function start() {
   await getDb();
@@ -64,6 +65,7 @@ async function start() {
   app.use("/api/approvals", approvalsRouter);
   app.use("/api/replies", repliesRouter);
   app.use("/api/admin", adminRouter);
+  app.use("/api/webhooks", webhooksRouter);
 
   app.listen(port, () => {
     console.log(`Vaigence LOCAL API running on http://localhost:${port} (SQLite mode, no auth)`);

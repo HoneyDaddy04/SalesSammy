@@ -35,6 +35,7 @@ import contextOverridesRouter from "./routes/context-overrides.js";
 import approvalsRouter from "./routes/approvals.js";
 import repliesRouter from "./routes/replies.js";
 import adminRouter from "./routes/admin.js";
+import webhooksRouter from "./routes/webhooks.js";
 
 async function start() {
   await getDb();
@@ -85,6 +86,7 @@ async function start() {
   // Public routes (no auth required)
   app.use("/api/auth", authRouter);
   app.use("/api/onboarding", onboardingRouter);
+  app.use("/api/webhooks", webhooksRouter);
 
   // Protected routes (auth required)
   app.use("/api/teammate", requireAuth, teammateRouter);

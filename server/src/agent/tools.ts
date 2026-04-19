@@ -1,5 +1,6 @@
 import { queryAll, queryOne, isLocalMode } from "../db/database.js";
 import { generateEmbedding } from "../services/embeddings.js";
+import { config } from "../config/env.js";
 
 // Tool: Get all previous messages sent to and received from this contact
 export async function getContactHistory(contactId: string): Promise<{ role: string; content: string; channel: string; date: string }[]> {
@@ -46,11 +47,34 @@ export async function searchKnowledgeBase(orgId: string, query: string): Promise
     .map(r => `[${r.source}] (${((r.similarity as number) * 100).toFixed(0)}% match) ${r.content}`);
 }
 
-// Tool: Search web for recent news (stub - returns empty, replace with real API later)
-export async function searchWeb(companyName: string): Promise<string[]> {
-  // TODO: Integrate with a search API (SerpAPI, Brave Search, etc.)
-  console.log(`[WEB SEARCH STUB] Would search for: ${companyName} recent news`);
-  return [];
+// Tool: Search web for recent news via Tavily
+export async function searchWeb(query: string): Promise<string[]> {
+  if (!config.tavilyApiKey) {
+    console.log(`[WEB SEARCH] No TAVILY_API_KEY configured, skipping`);
+    return [];
+  }
+
+  try {
+    const { tavily } = await import("tavily");
+    const client = tavily({ apiKey: config.tavilyApiKey });
+    const response = await client.search(query, {
+      maxResults: 5,
+      searchDepth: "basic",
+      includeAnswer: true,
+    });
+
+    const results: string[] = [];
+    if (response.answer) {
+      results.push(`Summary: ${response.answer}`);
+    }
+    for (const r of response.results || []) {
+      results.push(`[${r.title}] ${r.content?.slice(0, 300) || ""}`);
+    }
+    return results;
+  } catch (err: any) {
+    console.error("[WEB SEARCH] Tavily error:", err.message);
+    return [];
+  }
 }
 
 // Tool: Check LinkedIn for recent activity (stub)

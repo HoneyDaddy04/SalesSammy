@@ -15,4 +15,10 @@ export const config = {
   supabaseUrl: process.env.SUPABASE_URL || "",
   supabaseAnonKey: process.env.SUPABASE_ANON_KEY || "",
   openaiApiKey: process.env.OPENAI_API_KEY || "",
+  resendApiKey: process.env.RESEND_API_KEY || "",
+  resendFromEmail: process.env.RESEND_FROM_EMAIL || "sammy@updates.yourdomain.com",
+  tavilyApiKey: process.env.TAVILY_API_KEY || "",
+  whatsappToken: process.env.WHATSAPP_TOKEN || "",
+  whatsappPhoneId: process.env.WHATSAPP_PHONE_NUMBER_ID || "",
+  whatsappVerifyToken: process.env.WHATSAPP_VERIFY_TOKEN || "",
 };
