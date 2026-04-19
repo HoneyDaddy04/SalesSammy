@@ -56,10 +56,16 @@ router.post("/whatsapp", async (req, res) => {
     console.log(`[WHATSAPP WEBHOOK] From: ${phone} (${senderName}): ${content.slice(0, 80)}`);
 
     // Find which org this WhatsApp number belongs to
-    // Look for an org with a whatsapp integration that has this phone number
-    const integration = await queryOne(
-      `SELECT org_id FROM integrations WHERE type = 'whatsapp' AND status = 'connected' LIMIT 1`
-    );
+    // Match on the phone_number_id from the webhook metadata
+    const waPhoneId = value?.metadata?.phone_number_id || "";
+    const integration = waPhoneId
+      ? await queryOne(
+          `SELECT org_id FROM integrations WHERE type = 'whatsapp' AND status = 'connected' AND config LIKE ?`,
+          [`%${waPhoneId}%`]
+        )
+      : await queryOne(
+          `SELECT org_id FROM integrations WHERE type = 'whatsapp' AND status = 'connected' LIMIT 1`
+        );
 
     if (!integration) {
       console.log("[WHATSAPP WEBHOOK] No org with connected WhatsApp integration");
@@ -104,6 +110,133 @@ router.post("/whatsapp", async (req, res) => {
   } catch (err: any) {
     console.error("[WHATSAPP WEBHOOK] Error:", err.message);
   }
+});
+
+/**
+ * WhatsApp Embedded Signup — exchange code for token + phone number
+ * Called by the frontend after the user completes Meta's Embedded Signup popup.
+ *
+ * Flow:
+ * 1. Frontend loads Meta's JS SDK and launches Embedded Signup
+ * 2. User links their WhatsApp Business Account in Meta's popup
+ * 3. Meta returns a code to the frontend callback
+ * 4. Frontend sends code + org_id here
+ * 5. We exchange code → long-lived token, fetch phone number ID
+ * 6. Store in integrations table for this org
+ */
+router.post("/whatsapp/signup", async (req, res) => {
+  const { org_id, code } = req.body;
+  if (!org_id || !code) {
+    res.status(400).json({ error: "org_id and code required" });
+    return;
+  }
+
+  try {
+    // Exchange code for access token
+    const tokenRes = await fetch(
+      `https://graph.facebook.com/v21.0/oauth/access_token?` +
+      `client_id=${config.metaAppId}` +
+      `&client_secret=${config.metaAppSecret}` +
+      `&code=${code}`,
+      { method: "GET" }
+    );
+    const tokenData = await tokenRes.json();
+
+    if (tokenData.error) {
+      res.status(400).json({ error: tokenData.error.message });
+      return;
+    }
+
+    const accessToken = tokenData.access_token;
+
+    // Get the WhatsApp Business Account ID
+    const wabaRes = await fetch(
+      `https://graph.facebook.com/v21.0/debug_token?input_token=${accessToken}`,
+      { headers: { "Authorization": `Bearer ${config.metaAppId}|${config.metaAppSecret}` } }
+    );
+    const wabaData = await wabaRes.json();
+
+    // Fetch phone numbers associated with this WABA
+    // First get the WABA ID from the shared WABAs
+    const sharedRes = await fetch(
+      `https://graph.facebook.com/v21.0/me/businesses?access_token=${accessToken}`
+    );
+    const sharedData = await sharedRes.json();
+
+    // Try to get phone numbers from the first available WABA
+    let phoneNumberId = "";
+    let phoneDisplay = "";
+
+    // Search for WABA phone numbers using the token
+    const phonesRes = await fetch(
+      `https://graph.facebook.com/v21.0/me/phone_numbers?access_token=${accessToken}`
+    );
+    const phonesData = await phonesRes.json();
+
+    if (phonesData.data?.length > 0) {
+      phoneNumberId = phonesData.data[0].id;
+      phoneDisplay = phonesData.data[0].display_phone_number || phonesData.data[0].verified_name || "";
+    }
+
+    // Store credentials in integrations table
+    const { encrypt } = await import("../services/vault.js");
+    const credentials = {
+      whatsapp_token: accessToken,
+      whatsapp_phone_id: phoneNumberId,
+      phone_display: phoneDisplay,
+    };
+    const encryptedCreds = encrypt(JSON.stringify(credentials));
+
+    const existing = await queryOne(
+      `SELECT id FROM integrations WHERE org_id = ? AND type = 'whatsapp'`,
+      [org_id]
+    );
+
+    if (existing) {
+      await run(
+        `UPDATE integrations SET status = 'connected', credentials = ?, config = ? WHERE id = ?`,
+        [encryptedCreds, JSON.stringify({ phone_display: phoneDisplay, phone_number_id: phoneNumberId }), existing.id]
+      );
+    } else {
+      const id = uuid();
+      await run(
+        `INSERT INTO integrations (id, org_id, type, category, status, credentials, config) VALUES (?, ?, 'whatsapp', 'channel', 'connected', ?, ?)`,
+        [id, org_id, encryptedCreds, JSON.stringify({ phone_display: phoneDisplay, phone_number_id: phoneNumberId })]
+      );
+    }
+
+    // Subscribe to webhooks for this phone number
+    if (phoneNumberId && accessToken) {
+      await fetch(
+        `https://graph.facebook.com/v21.0/${phoneNumberId}/subscribed_apps`,
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      ).catch(() => {}); // Non-critical
+    }
+
+    console.log(`[WHATSAPP SIGNUP] Org ${org_id} connected WhatsApp: ${phoneDisplay} (${phoneNumberId})`);
+    res.json({
+      status: "connected",
+      phone_display: phoneDisplay,
+      phone_number_id: phoneNumberId,
+    });
+  } catch (err: any) {
+    console.error("[WHATSAPP SIGNUP] Error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** GET /api/webhooks/whatsapp/config — return Meta App ID and config ID for frontend SDK */
+router.get("/whatsapp/config", (_req, res) => {
+  res.json({
+    app_id: config.metaAppId,
+    config_id: config.metaConfigId,
+  });
 });
 
 export default router;

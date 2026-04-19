@@ -24,12 +24,13 @@ interface IntegrationDef {
   name: string;
   desc: string;
   category: "channel" | "lead_source" | "context" | "calendar";
-  color: string;       // bg color class
-  textColor: string;   // text color class
-  initials: string;    // 1-2 letter brand abbreviation shown in colored circle
+  color: string;
+  textColor: string;
+  initials: string;
   icon?: React.FC<{ className?: string }>;
   available: boolean;
   fields: { key: string; label: string; placeholder: string; type?: string }[];
+  oauth?: boolean; // Uses OAuth/Embedded Signup instead of manual fields
 }
 
 // Full catalog of all integrations, with brand colors
@@ -40,7 +41,7 @@ const ALL_INTEGRATIONS: IntegrationDef[] = [
   { type: "outlook", name: "Outlook", desc: "Send emails via Microsoft Outlook", category: "channel", color: "bg-blue-600/10", textColor: "text-blue-600", initials: "O", icon: OutlookIcon, available: true,
     fields: [{ key: "email", label: "Email", placeholder: "you@outlook.com" }, { key: "app_password", label: "App password", placeholder: "xxxx xxxx xxxx xxxx", type: "password" }] },
   { type: "whatsapp", name: "WhatsApp Business", desc: "Follow up with leads via WhatsApp", category: "channel", color: "bg-green-500/10", textColor: "text-green-600", initials: "W", icon: WhatsAppIcon, available: true,
-    fields: [{ key: "phone", label: "Business phone", placeholder: "+234 xxx xxx xxxx" }, { key: "api_key", label: "API key", placeholder: "Your WhatsApp Business API key", type: "password" }] },
+    fields: [], oauth: true },
   { type: "instagram", name: "Instagram DMs", desc: "Send DMs to leads on Instagram", category: "channel", color: "bg-pink-500/10", textColor: "text-pink-600", initials: "IG", icon: InstagramIcon, available: false, fields: [] },
   { type: "linkedin", name: "LinkedIn DM", desc: "Reach out to prospects on LinkedIn", category: "channel", color: "bg-blue-700/10", textColor: "text-blue-700", initials: "in", icon: LinkedInIcon, available: false, fields: [] },
   { type: "sms", name: "SMS (Twilio)", desc: "Send text messages to leads", category: "channel", color: "bg-red-400/10", textColor: "text-red-500", initials: "T", icon: TwilioIcon, available: false, fields: [] },
@@ -85,6 +86,84 @@ const IntegrationsView = () => {
   const [connectingType, setConnectingType] = useState<string | null>(null);
   const [credentials, setCredentials] = useState<Record<string, string>>({});
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // WhatsApp Embedded Signup handler
+  const handleWhatsAppSignup = async () => {
+    setActionLoading("whatsapp");
+    try {
+      // Get Meta App config from backend
+      const configRes = await fetch(`${API_BASE}/api/webhooks/whatsapp/config`);
+      const metaConfig = await configRes.json();
+
+      if (!metaConfig.app_id) {
+        toast.error("WhatsApp integration not configured on the platform yet");
+        setActionLoading(null);
+        return;
+      }
+
+      // Load Meta's JS SDK if not already loaded
+      if (!(window as any).FB) {
+        await new Promise<void>((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = "https://connect.facebook.net/en_US/sdk.js";
+          script.async = true;
+          script.defer = true;
+          script.onload = () => resolve();
+          script.onerror = () => reject(new Error("Failed to load Facebook SDK"));
+          document.body.appendChild(script);
+        });
+
+        (window as any).FB.init({
+          appId: metaConfig.app_id,
+          cookie: true,
+          xfbml: true,
+          version: "v21.0",
+        });
+      }
+
+      // Launch Embedded Signup
+      (window as any).FB.login(
+        async (response: any) => {
+          if (response.authResponse?.code) {
+            // Exchange code for token via our backend
+            try {
+              const signupRes = await fetch(`${API_BASE}/api/webhooks/whatsapp/signup`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ org_id: orgId, code: response.authResponse.code }),
+              });
+              const signupData = await signupRes.json();
+
+              if (signupData.status === "connected") {
+                toast.success(`WhatsApp connected: ${signupData.phone_display || "Ready"}`);
+                await loadIntegrations();
+              } else {
+                toast.error(signupData.error || "Failed to connect WhatsApp");
+              }
+            } catch {
+              toast.error("Failed to complete WhatsApp signup");
+            }
+          } else {
+            toast.error("WhatsApp signup cancelled");
+          }
+          setActionLoading(null);
+        },
+        {
+          config_id: metaConfig.config_id,
+          response_type: "code",
+          override_default_response_type: true,
+          extras: {
+            setup: {},
+            featureType: "",
+            sessionInfoVersion: "3",
+          },
+        }
+      );
+    } catch (err: any) {
+      toast.error(err.message || "Failed to launch WhatsApp signup");
+      setActionLoading(null);
+    }
+  };
 
   const loadIntegrations = async () => {
     if (!orgId) return;
@@ -227,6 +306,10 @@ const IntegrationsView = () => {
                         {isConnected ? (
                           <Button variant="outline" size="sm" onClick={() => handleDisconnect(def.type)} disabled={isLoading} className="gap-1.5 text-xs w-full">
                             {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Unlink className="w-3 h-3" />} Disconnect
+                          </Button>
+                        ) : def.oauth ? (
+                          <Button size="sm" onClick={def.type === "whatsapp" ? handleWhatsAppSignup : undefined} disabled={isLoading} className="gap-1.5 text-xs w-full">
+                            {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Link2 className="w-3 h-3" />} Connect with {def.name}
                           </Button>
                         ) : isConnecting ? (
                           <>

@@ -21,4 +21,7 @@ export const config = {
   whatsappToken: process.env.WHATSAPP_TOKEN || "",
   whatsappPhoneId: process.env.WHATSAPP_PHONE_NUMBER_ID || "",
   whatsappVerifyToken: process.env.WHATSAPP_VERIFY_TOKEN || "",
+  metaAppId: process.env.META_APP_ID || "",
+  metaAppSecret: process.env.META_APP_SECRET || "",
+  metaConfigId: process.env.META_CONFIG_ID || "", // WhatsApp Embedded Signup config ID
 };
